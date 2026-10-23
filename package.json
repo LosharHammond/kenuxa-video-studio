@@ -1,0 +1,17 @@
+{
+  "name": "kenuxa-video-studio",
+  "version": "2.4.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@ffmpeg/ffmpeg": "0.12.15",
+    "@ffmpeg/core": "0.12.10"
+  },
+  "devDependencies": {
+    "linkedom": "0.18.14"
+  }
+}

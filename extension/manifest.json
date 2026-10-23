@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Kenuxa Video Studio",
+  "version": "2.4.0",
+  "minimum_chrome_version": "109",
+  "description": "Save supported web media, convert files locally, and discover original video sources with sharing by choice.",
+  "permissions": [
+    "webRequest",
+    "downloads",
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Kenuxa Video Studio",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; worker-src 'self'; frame-src https://www.youtube-nocookie.com https://player.vimeo.com https://www.dailymotion.com; connect-src 'self' http: https: blob:"
+  },
+  "homepage_url": "https://losharhammond.github.io/kenuxa-video-studio/"
+}

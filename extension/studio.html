@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Kenuxa Video Studio</title>
+    <link rel="icon" href="icons/icon32.png" />
+    <link rel="stylesheet" href="studio.css" />
+    <link rel="stylesheet" href="premium.css" />
+  </head>
+  <body>
+    <div class="workspace">
+      <aside class="sidebar">
+        <a class="brand" href="#library"
+          ><img
+            src="icons/icon48.png"
+            width="44"
+            height="44"
+            alt="Kenuxa logo"
+          /><span><strong>KENUXA</strong><small>VIDEO STUDIO</small></span></a
+        >
+        <div class="workspace-label">YOUR WORKSPACE</div>
+        <nav aria-label="Workspace">
+          <button data-view="watch" class="nav watch-nav">
+            <span>▶</span> Kenuxa Watch</button
+          ><button data-view="home" class="nav active">
+            <span>⌂</span> On this device <b id="navHome">0</b></button
+          ><button data-view="library" class="nav">
+            <span>▦</span> Media library <b id="navLibrary">0</b></button
+          ><button data-view="queue" class="nav">
+            <span>⇣</span> Download queue <b id="navQueue">0</b></button
+          ><button data-view="history" class="nav">
+            <span>◷</span> History</button
+          ><button data-view="convert" class="nav">
+            <span>⤨</span> File converter
+          </button>
+        </nav>
+        <div class="sidebar-divider"></div>
+        <button data-view="help" class="nav">
+          <span>ⓘ</span> Help & coverage
+        </button>
+        <div class="local-card">
+          <span class="live-dot"></span><strong>Made for your device</strong>
+          <p>
+            Video processing stays in your browser. Share source links only when
+            you choose.
+          </p>
+          <span class="version">KENUXA ENGINE 2.4</span>
+        </div>
+        <div class="sidebar-footer">
+          <img src="icons/icon32.png" width="25" height="25" alt="" /><span
+            >Personal workspace<small>Local browser session</small></span
+          ><span class="status-dot"></span>
+        </div>
+      </aside>
+      <div class="main-shell">
+        <header class="topbar">
+          <div class="breadcrumb">
+            Workspace <span>/</span> <strong id="crumb">Media library</strong>
+          </div>
+          <div class="top-actions">
+            <button id="watchHome" data-view="watch" class="watch-cta">
+              <span>▶</span> Kenuxa Watch</button
+            ><span class="privacy-pill"
+              ><span class="live-dot"></span>
+              <span id="privacyLabel">Files stay local</span></span
+            ><button id="pasteTop" class="secondary">＋ Add media URL</button>
+          </div>
+        </header>
+        <main>
+          <section class="page-heading">
+            <div>
+              <div class="eyebrow">YOUR PERSONAL MEDIA WORKSPACE</div>
+              <h1 id="heading">Capture. Collect. Create.</h1>
+              <p id="subtitle">
+                Discover your media, choose its quality, and make it yours to
+                work with.
+              </p>
+            </div>
+            <div class="heading-badge">
+              <span>↘</span>
+              <div>
+                Video, simplified.<small
+                  >No subscriptions. Just your workflow.</small
+                >
+              </div>
+            </div>
+          </section>
+          <div
+            id="notice"
+            class="notice"
+            role="status"
+            aria-live="polite"
+            hidden
+          ></div>
+          <section id="watchView" class="view" hidden>
+            <div class="watch-hero">
+              <div>
+                <div class="eyebrow">KENUXA WATCH / COMMUNITY</div>
+                <h2>Your next great<br />watch starts here.</h2>
+                <p>
+                  A shared home for videos worth finding.<br />Watch original
+                  players. Share by choice.
+                </p>
+                <button id="watchAdd" class="primary">
+                  ＋ Add a discovery
+                </button>
+                <div class="watch-ribbon">
+                  <span>ORIGINAL PLAYERS</span><span>SHARE BY CHOICE</span>
+                </div>
+              </div>
+              <div class="watch-hero-art">
+                <img
+                  src="icons/watch-cinema.svg"
+                  width="370"
+                  height="220"
+                  alt="An original Kenuxa cinema illustration"
+                /><span>DISCOVER / WATCH / SHARE</span>
+              </div>
+            </div>
+            <div class="section-header">
+              <div>
+                <h2>
+                  Discover on Watch
+                  <span id="watchTotal" class="count-chip">0</span>
+                </h2>
+                <p id="watchStatus" role="status">
+                  Loading shared discoveries…
+                </p>
+              </div>
+              <div class="search">
+                <span>⌕</span
+                ><input
+                  id="watchSearch"
+                  placeholder="Search discoveries…"
+                  aria-label="Search Watch"
+                />
+              </div>
+            </div>
+            <div class="toolbar">
+              <div class="filters">
+                <button class="filter active" data-watch-mode="community">
+                  Everyone</button
+                ><button class="filter" data-watch-mode="mine">
+                  Shared by me</button
+                ><button class="filter" data-watch-mode="saved">
+                  Saved privately
+                </button>
+              </div>
+              <button id="watchRefresh" class="secondary small">
+                ↻ Refresh
+              </button>
+            </div>
+            <div id="watchGrid" class="watch-grid"></div>
+            <p class="watch-disclosure">
+              Everyone shows public source links shared across installations.
+              Saved privately stays in this browser. Opening a player contacts
+              the original provider; embedding depends on its settings. Sharing
+              identity belongs to this installation—clearing extension data
+              removes your ability to manage earlier shares.
+            </p>
+          </section>
+          <section id="homeView" class="view">
+            <div class="section-header">
+              <div>
+                <h2>
+                  Your videos <span id="homeTotal" class="count-chip">0</span>
+                </h2>
+                <p>
+                  Legacy personal copies stay on this device. New downloads save
+                  to disk; public viewing uses source embeds.
+                </p>
+              </div>
+              <div class="search">
+                <span>⌕</span
+                ><input
+                  id="homeSearch"
+                  aria-label="Search your videos"
+                  placeholder="Search your videos…"
+                />
+              </div>
+            </div>
+            <div id="homeGrid" class="video-grid"></div>
+          </section>
+          <section id="libraryView" class="view" hidden>
+            <div class="stats-grid">
+              <article class="stat">
+                <span class="stat-icon violet">▣</span>
+                <div>
+                  <p>Detected sources</p>
+                  <strong id="sourceCount">0</strong
+                  ><small>In this page session</small>
+                </div>
+              </article>
+              <article class="stat">
+                <span class="stat-icon orange">⇣</span>
+                <div>
+                  <p>In your queue</p>
+                  <strong id="queueCount">0</strong
+                  ><small>Ready when you are</small>
+                </div>
+              </article>
+              <article class="stat">
+                <span class="stat-icon green">✓</span>
+                <div>
+                  <p>Downloads completed</p>
+                  <strong id="completeCount">0</strong
+                  ><small>Saved in this workspace</small>
+                </div>
+              </article>
+            </div>
+            <div class="source-strip">
+              <span class="source-symbol">◎</span>
+              <div>
+                <small>CONNECTED SOURCE PAGE</small
+                ><strong id="sourceTitle"
+                  >Open Kenuxa from a video page to connect a source.</strong
+                >
+              </div>
+              <button id="refresh" class="secondary small">
+                ↻ Refresh sources
+              </button>
+            </div>
+            <div class="section-header">
+              <div>
+                <h2>
+                  Media library
+                  <span id="libraryTotal" class="count-chip">0</span>
+                </h2>
+                <p>Videos and audio detected while you browse.</p>
+              </div>
+              <div class="search">
+                <span>⌕</span
+                ><input
+                  id="search"
+                  aria-label="Search media"
+                  placeholder="Search media or host…"
+                />
+              </div>
+            </div>
+            <div class="toolbar">
+              <div class="filters" role="group" aria-label="Media filters">
+                <button class="filter active" data-filter="all">
+                  All media</button
+                ><button class="filter" data-filter="Video">Videos</button
+                ><button class="filter" data-filter="HLS">HLS</button
+                ><button class="filter" data-filter="DASH">DASH</button
+                ><button class="filter" data-filter="Audio">Audio</button>
+              </div>
+              <div class="selection-actions">
+                <label class="check"
+                  ><input type="checkbox" id="selectAll" /> Select
+                  visible</label
+                ><button id="queueSelected" class="primary small">
+                  ＋ Queue selected
+                </button>
+              </div>
+            </div>
+            <div id="mediaGrid" class="media-grid"></div>
+          </section>
+          <section id="queueView" class="view" hidden>
+            <div class="section-header">
+              <div>
+                <h2>Your download queue</h2>
+                <p>
+                  Jobs run one at a time. Media parts use up to three parallel
+                  connections.
+                </p>
+              </div>
+              <button id="clearFinished" class="secondary">
+                Clear finished jobs
+              </button>
+            </div>
+            <div id="queueList"></div>
+          </section>
+          <section id="historyView" class="view" hidden>
+            <div class="section-header">
+              <div>
+                <h2>Download history</h2>
+                <p>
+                  Only file details are retained. Private media URLs stay in
+                  session memory.
+                </p>
+              </div>
+              <button id="clearHistory" class="secondary">Clear history</button>
+            </div>
+            <div id="historyList"></div>
+          </section>
+          <section id="convertView" class="view" hidden>
+            <div class="converter-layout">
+              <article class="panel">
+                <div class="panel-heading">
+                  <span class="stat-icon violet">⤨</span>
+                  <div>
+                    <h2>Make your media ready.</h2>
+                    <p>Convert a file from your device without uploading it.</p>
+                  </div>
+                </div>
+                <label class="dropzone" id="dropzone"
+                  ><input
+                    type="file"
+                    id="localFile"
+                    accept="video/*,audio/*,.ts,.mkv,.m4a,.mov"
+                  /><span class="drop-icon">＋</span
+                  ><strong id="fileLabel">Choose a video or audio file</strong
+                  ><span>or drop it here · up to 256 MB</span
+                  ><small>MP4 · WebM · MOV · TS · MKV · MP3 · M4A</small></label
+                >
+                <div class="form-row">
+                  <label
+                    >Output format<select id="convertFormat">
+                      <option value="mp4">MP4 · fast remux</option>
+                      <option value="compatible">
+                        MP4 · H.264 / AAC compatible
+                      </option>
+                      <option value="mp3">MP3 · audio only</option>
+                    </select></label
+                  ><button id="convertButton" class="primary">
+                    Convert & save ↗
+                  </button>
+                </div>
+                <p id="convertStatus" role="status"></p>
+              </article>
+              <aside class="info-panel">
+                <div class="eyebrow">BUILT-IN MEDIA ENGINE</div>
+                <h3>Ready for your<br />next creation.</h3>
+                <p>
+                  Fast MP4 preserves compatible codecs. Compatible MP4
+                  re-encodes to H.264 and AAC for wider editing and playback
+                  support.
+                </p>
+                <hr />
+                <p>
+                  Large files and encoding can use substantial memory. Keep this
+                  tab open while the engine works.
+                </p>
+                <span class="privacy-pill">◉ Processed on your device</span>
+              </aside>
+            </div>
+          </section>
+          <section id="helpView" class="view" hidden>
+            <div class="help-grid">
+              <article class="panel">
+                <h2>Start with the source page</h2>
+                <ol>
+                  <li>Open a webpage and play its video.</li>
+                  <li>Click the Kenuxa extension, then Open Video Studio.</li>
+                  <li>
+                    Choose a quality and output format, then add the media to
+                    your queue.
+                  </li>
+                  <li>
+                    Keep the source page and Studio open until saving finishes.
+                  </li>
+                </ol>
+                <h3>When you see more than one source</h3>
+                <p>
+                  Pages can contain advertisements and several versions of the
+                  same video. Use the host, path, stream type and preview on the
+                  source page to identify what you want.
+                </p>
+                <h3>Pause & retry</h3>
+                <p>
+                  Pause takes effect between video parts. Parts already in
+                  flight can finish. Resume keeps downloaded parts in this open
+                  tab. Reloading Studio or closing it loses unfinished work.
+                  Retry starts a failed job again.
+                </p>
+              </article>
+              <article class="panel">
+                <h2>Coverage, clearly stated</h2>
+                <ul>
+                  <li>
+                    Direct video and audio files, including byte-range
+                    downloads.
+                  </li>
+                  <li>
+                    Complete, unencrypted HLS, quality selection, byte ranges
+                    and separate audio tracks.
+                  </li>
+                  <li>
+                    Static, unprotected DASH with one period and common
+                    SegmentTemplate, SegmentTimeline or SegmentList layouts.
+                  </li>
+                  <li>
+                    Built-in MP4 remux, H.264/AAC conversion and MP3 export.
+                  </li>
+                </ul>
+                <p>
+                  There is no universal website extractor. DRM, encrypted
+                  manifests, live streams, signature deciphering and paywall
+                  bypass are unsupported. Sites using custom players may not
+                  expose a usable media source.
+                </p>
+                <p>
+                  Jobs are limited to 256 MB of input data; each page transfer
+                  is limited to 32 MB. Conversion needs additional memory. MP4
+                  fast mode depends on compatible codecs.
+                </p>
+                <a href="THIRD-PARTY.txt" target="_blank"
+                  >Open-source engine & licenses ↗</a
+                >
+              </article>
+            </div>
+          </section>
+          <footer class="workspace-foot">
+            <span>KENUXA VIDEO STUDIO <b>2.4</b></span
+            ><span
+              >Built for your workflow.<a
+                href="https://losharhammond.github.io/kenuxa-video-studio/privacy.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Privacy</a
+              ><a
+                href="https://github.com/LosharHammond/kenuxa-video-studio/issues"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Support</a
+              ></span
+            >
+          </footer>
+        </main>
+      </div>
+    </div>
+    <dialog id="playerDialog" class="player-dialog">
+      <div class="player-top">
+        <strong id="playerTitle"></strong
+        ><button
+          type="button"
+          id="closePlayer"
+          class="icon-button"
+          aria-label="Close player"
+        >
+          ×
+        </button>
+      </div>
+      <div id="playerHost" class="player-host"></div>
+      <div class="player-meta">
+        <span id="playerInfo"></span
+        ><span class="player-actions"
+          ><button id="playerSave" class="secondary small">⇣ Save a copy</button
+          ><button id="playerRename" class="secondary small">Rename</button
+          ><button id="playerDelete" class="ghost">Remove</button></span
+        >
+      </div>
+    </dialog>
+    <dialog id="addDialog">
+      <form id="addForm">
+        <div class="dialog-top">
+          <div>
+            <div class="eyebrow">ADD TO YOUR WORKSPACE</div>
+            <h2>Add a media URL</h2>
+          </div>
+          <button
+            type="button"
+            id="closeDialog"
+            class="icon-button"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+        <p>
+          Paste a direct file, .m3u8 playlist or .mpd manifest. A normal webpage
+          URL is not a video source.
+        </p>
+        <label
+          >Media URL<input
+            id="manualUrl"
+            type="url"
+            required
+            placeholder="https://…/video.mp4" /></label
+        ><label>Name<input id="manualName" placeholder="My video" /></label>
+        <div class="dialog-actions">
+          <button type="submit" class="primary">Add to library</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="sharingDialog">
+      <div class="eyebrow">YOUR DOWNLOAD. YOUR CHOICE.</div>
+      <h2>Add this source to everyone’s Watch?</h2>
+      <p>
+        Before <span id="shareCount">this download</span> starts, choose what
+        happens after it is saved.
+      </p>
+      <p>
+        <strong>Share with everyone:</strong> its title and public source page
+        will appear in Kenuxa Watch for other users. Supported original players
+        can be watched there. No video file or captured media-stream address is
+        uploaded.
+      </p>
+      <p>
+        <strong>Keep private:</strong> no source listing or download details are
+        sent to Watch.
+      </p>
+      <label class="check share-check"
+        ><input type="checkbox" id="shareRights" /> I am allowed to share this
+        public source and understand the listing will be visible to
+        everyone.</label
+      >
+      <div class="dialog-actions share-actions">
+        <button id="sharePrivate" class="secondary">Keep private</button
+        ><button id="sharePublic" class="primary" disabled>
+          Share with everyone
+        </button>
+      </div>
+    </dialog>
+    <dialog id="watchAddDialog">
+      <form id="watchForm">
+        <div class="dialog-top">
+          <h2>Add a discovery</h2>
+          <button
+            type="button"
+            id="watchCloseAdd"
+            class="icon-button"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+        <p>
+          Use the original video webpage. Keep it in your private collection, or
+          share its title and source link with everyone.
+        </p>
+        <label
+          >Title<input
+            id="watchName"
+            maxlength="120"
+            required
+            placeholder="Give your discovery a title" /></label
+        ><label
+          >Video webpage URL<input
+            id="watchUrl"
+            type="url"
+            maxlength="1024"
+            required
+            placeholder="https://…" /></label
+        ><label class="check share-check"
+          ><input id="watchConsent" type="checkbox" /> I am allowed to share
+          this source and understand its title and link will be visible to
+          everyone.</label
+        >
+        <p id="watchAddError" class="error" role="status"></p>
+        <div class="dialog-actions share-actions">
+          <button type="submit" class="secondary">Save privately</button
+          ><button id="watchPublish" type="submit" class="primary">
+            Share with everyone
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="watchPlayerDialog" class="player-dialog">
+      <div class="player-top">
+        <strong id="watchPlayerTitle"></strong
+        ><button
+          id="watchClosePlayer"
+          class="icon-button"
+          aria-label="Close player"
+        >
+          ×
+        </button>
+      </div>
+      <div id="watchPlayerHost" class="watch-player-host"></div>
+      <div class="player-meta">
+        <span>The original provider controls playback.</span
+        ><a
+          id="watchOriginal"
+          class="secondary small"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Open original ↗</a
+        >
+      </div>
+    </dialog>
+    <script src="vendor/ffmpeg/ffmpeg.js"></script>
+    <script src="studio.js" type="module"></script>
+  </body>
+</html>

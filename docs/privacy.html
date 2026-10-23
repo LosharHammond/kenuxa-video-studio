@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Privacy policy | Kenuxa Video Studio</title>
+    <link rel="icon" href="assets/kenuxa.svg" />
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <main>
+      <header>
+        <a href="index.html"
+          ><img src="assets/kenuxa.svg" alt="Kenuxa logo"
+        /></a>
+        <div><b>KENUXA</b><span>VIDEO STUDIO</span></div>
+      </header>
+      <span class="tag">EFFECTIVE 23 OCTOBER 2026</span>
+      <h1>Your media. Your choice.</h1>
+      <p class="lead">
+        This policy describes Kenuxa Video Studio, including its optional Kenuxa
+        Watch community. Kenuxa is operated by Loshar Hammond. Contact
+        <a href="mailto:losharhammond@gmail.com">losharhammond@gmail.com</a>.
+      </p>
+      <h2>What stays on your device</h2>
+      <p>
+        Downloads and file conversion are processed within your browser. Video
+        and audio file contents are not uploaded to Kenuxa or its database.
+        Download history, private source bookmarks, settings and an installation
+        signing key are held in extension storage. Existing legacy personal
+        video copies, if present, remain in local IndexedDB. New downloads save
+        to disk and do not make an automatic duplicate video copy in browser
+        storage.
+      </p>
+      <h2>Media detection while you browse</h2>
+      <p>
+        The extension observes media response URLs and headers on HTTP/HTTPS
+        pages to identify supported files and playlists. Captured URLs, stream
+        type, size and page/frame details are kept in browser session storage,
+        capped at 100 sources per tab and cleared on navigation or tab closure.
+        Scanning a page reads its video/audio source elements. The extension
+        does not collect general page text, form inputs, passwords, cookies,
+        payment data or advertising identifiers. Opening Studio from a page
+        brings its title and URL into the local workspace.
+      </p>
+      <h2>When you share with everyone</h2>
+      <p>
+        Before a web download begins, you can choose Keep private or explicitly
+        consent to Share with everyone. Sharing is not selected by default.
+        After the download is confirmed saved, the extension sends the title and
+        original public video webpage URL to the Kenuxa Watch service. You can
+        also explicitly publish a discovery through the Watch form. Captured CDN
+        manifests, signed stream tokens and downloaded video bytes are not
+        published.
+      </p>
+      <p>
+        Shared titles, source links, publication dates and supported player
+        details are public. A hash of the installation public key associates the
+        listing with its publisher for removal. Signed requests also send a
+        public verification key, timestamp, nonce and signature; the private
+        signing key stays in the extension. Report reasons and the reporting
+        installation hash are stored for moderation and are not shown in the
+        public feed.
+      </p>
+      <h2>Services contacted</h2>
+      <p>
+        Kenuxa Watch uses Supabase for its metadata database and API, hosted in
+        the project's EU region. The extension contacts that API when you browse
+        the community, manage shares, publish or report. Supabase may process
+        request IP addresses and operational logs as part of hosting. We do not
+        sell data, run advertising tracking or include third-party analytics.
+      </p>
+      <p>
+        Downloading contacts the original media provider. Opening an embedded
+        player contacts YouTube, Vimeo or Dailymotion; those providers control
+        playback and may process viewing information under their own policies.
+        Kenuxa loads supported players only after you open a video. Source links
+        open the original website, which has its own privacy practices.
+      </p>
+      <h2>Retention and removal</h2>
+      <p>
+        Download history is limited to 100 entries and can be cleared in
+        History. Private Watch source links can be removed from Saved privately.
+        Shared by me lets you remove public listings created by this browser
+        installation. Public listings remain until their publisher or the
+        operator removes them. Related reports are deleted when the listing is
+        deleted. Anti-replay nonce records are cleaned after ten minutes during
+        subsequent service requests. Hosting logs follow provider retention
+        settings.
+      </p>
+      <p>
+        Uninstalling or clearing extension storage removes local history,
+        bookmarks and the signing key; it does not automatically delete public
+        shares or downloaded files on disk. Losing the key also loses in-app
+        management access to previous shares. For removal assistance, email the
+        source listing URL or ID to
+        <a href="mailto:losharhammond@gmail.com">losharhammond@gmail.com</a>. Do
+        not send passwords, private media access tokens or video files. The
+        operator may request enough information to verify a removal request.
+      </p>
+      <h2>Your controls</h2>
+      <p>
+        You can keep every download private, use local conversion without public
+        sharing, remove your shares, report listings and uninstall the
+        extension. In Firefox, publication also requests the browser's optional
+        data-collection permissions. Declining those permissions prevents
+        publication. The extension has no paid subscription and no automatic
+        video uploads.
+      </p>
+      <h2>Security and policy changes</h2>
+      <p>
+        Sharing requests use HTTPS and installation signatures. The database's
+        privileged credential is held on the server and is not shipped in the
+        extension. These controls do not guarantee uninterrupted service or
+        prevent all abuse. Material changes to data handling will be reflected
+        here and in the extension's disclosures before introducing a new use of
+        data.
+      </p>
+      <footer>
+        Kenuxa Video Studio · <a href="privacy.html">Privacy</a> ·
+        <a href="mailto:losharhammond@gmail.com">Contact support</a> ·
+        <a href="https://github.com/LosharHammond/kenuxa-video-studio"
+          >Source code</a
+        >
+      </footer>
+    </main>
+  </body>
+</html>

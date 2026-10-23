@@ -1,0 +1,26 @@
+Kenuxa Video Studio uses bundled open-source software. No paid API is used.
+
+@ffmpeg/ffmpeg 0.12.15 - MIT
+Copyright (c) Jerome Wu and ffmpeg.wasm contributors.
+https://github.com/ffmpegwasm/ffmpeg.wasm
+License: vendor/FFMPEG-WASM-LICENSE.txt
+
+@ffmpeg/core 0.12.10 - GPL-2.0-or-later (as declared by its npm package)
+Includes FFmpeg and codec libraries compiled to WebAssembly.
+The bundled engine is an unmodified upstream distribution.
+GPL license text: vendor/GPL-2.0.txt
+Upstream package and exact published distribution:
+https://www.npmjs.com/package/@ffmpeg/core/v/0.12.10
+https://registry.npmjs.org/@ffmpeg/core/-/core-0.12.10.tgz
+Source, dependency versions, Docker build files and build instructions:
+https://github.com/ffmpegwasm/ffmpeg.wasm/tree/main/packages/core
+https://github.com/ffmpegwasm/ffmpeg.wasm/tree/main/build
+https://ffmpegwasm.netlify.app/docs/contribution/core/
+FFmpeg source: https://github.com/FFmpeg/FFmpeg/tree/n5.1.4
+Engine overview and included libraries:
+https://ffmpegwasm.netlify.app/docs/overview/
+
+Kenuxa's extension code, interface and logo are supplied as editable source.
+The conversion engine runs locally. Its code and WebAssembly are included
+in vendor/ and are never downloaded dynamically from a third-party website.
+Retain third-party notices if you distribute your own copy.
