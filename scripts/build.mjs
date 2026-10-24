@@ -1,12 +1,21 @@
 import { readFile, writeFile, mkdir, cp, rm } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { resolve, relative, sep } from "node:path";
 const root = fileURLToPath(new URL("../", import.meta.url));
 process.chdir(root);
 for (const browser of ["chromium", "edge", "opera", "firefox"]) {
   const dest = "dist/" + browser;
+  const target = resolve(root, dest),
+    distRoot = resolve(root, "dist");
+  if (
+    relative(distRoot, target) !== browser ||
+    !target.startsWith(distRoot + sep)
+  )
+    throw Error("Unsafe build output path");
   await rm(dest, { recursive: true, force: true });
   await cp("extension", dest, { recursive: true });
-  for (const asset of ["icon256.png", "icon512.png", "kenuxa.svg"]) await rm(dest + "/icons/" + asset, { force: true });
+  for (const asset of ["icon256.png", "icon512.png", "kenuxa.svg"])
+    await rm(dest + "/icons/" + asset, { force: true });
   await mkdir(dest + "/vendor/ffmpeg", { recursive: true });
   await mkdir(dest + "/vendor/core", { recursive: true });
   for (const name of ["ffmpeg.js", "814.ffmpeg.js"])
@@ -40,5 +49,3 @@ for (const browser of ["chromium", "edge", "opera", "firefox"]) {
   );
   console.log("Built " + dest);
 }
-
-

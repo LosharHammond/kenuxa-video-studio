@@ -9,7 +9,11 @@ export function stopConversion() {
 }
 export async function convert(tracks, format, onStatus = () => {}) {
   const primary = tracks.find((t) => t.kind === "video") || tracks[0];
-  if (format === "original" && tracks.length === 1)
+  if (
+    (format === "original" ||
+      (format === "mp4" && primary.extension === "mp4")) &&
+    tracks.length === 1
+  )
     return { blob: primary.blob, extension: primary.extension };
   onStatus("Loading the local media engine…");
   if (!ffmpeg) {
@@ -49,22 +53,22 @@ export async function convert(tracks, format, onStatus = () => {}) {
       "2",
     );
   } else {
-    if (video >= 0) args.push("-map", video + ":v:0?");
+    if (video >= 0) args.push("-map", video + ":v:0");
     args.push("-map", audio >= 0 ? audio + ":a:0?" : "0:a:0?");
     if (format === "compatible")
       args.push(
         "-c:v",
         "libx264",
         "-preset",
-        "ultrafast",
+        "fast",
         "-crf",
-        "23",
+        "18",
         "-pix_fmt",
         "yuv420p",
         "-c:a",
         "aac",
         "-b:a",
-        "128k",
+        "256k",
       );
     else args.push("-c", "copy");
     if (format !== "original") args.push("-movflags", "+faststart");

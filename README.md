@@ -2,7 +2,9 @@
 
 A browser workspace for supported media downloads, local file conversion and optional source-link sharing through Kenuxa Watch.
 
-**Status:** 2.4 release candidate. Store submission and approval status is recorded in [publishing status](docs/publishing-status.md). This repository is not proof of an approved store listing.
+**Status:** 2.5 release candidate. This upgrade improves focus, deduplication and preservation of source quality. The earlier 2.4 packages were submitted to Opera and Firefox; this 2.5 build is a new review candidate. This repository is not proof of an approved store listing.
+
+See [the focused capture and quality upgrade](docs/quality-upgrade-2.5.md) for the new download flow and its verification.
 
 ## What it does
 

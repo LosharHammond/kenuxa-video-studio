@@ -14,6 +14,12 @@ import { initWatch, allowSharing } from "./watch.mjs";
 import { requester } from "./requests.mjs";
 import { convert, stopConversion } from "./converter.mjs";
 import {
+  scanPlayers,
+  rankSources,
+  sourceKey,
+  mergeCaptures,
+} from "./detection.mjs";
+import {
   probe,
   saveVideo,
   listVideos,
@@ -34,6 +40,7 @@ const state = {
   videos: [],
   running: false,
   preview: null,
+  showAllSources: false,
 };
 const el = (tag, cls, text) => {
   const n = document.createElement(tag);
@@ -63,6 +70,10 @@ function visible() {
   const q = $("search").value.toLowerCase();
   return state.items.filter(
     (i) =>
+      (state.showAllSources ||
+        !state.items.some((r) => r.focused) ||
+        i.focused ||
+        i.manual) &&
       (state.filter === "all" || i.kind === state.filter) &&
       (i.title + " " + i.url).toLowerCase().includes(q),
   );
@@ -96,9 +107,9 @@ function button(label, cls, action) {
   return b;
 }
 const formats = [
-  ["mp4", "MP4 · fast"],
-  ["compatible", "MP4 · compatible"],
-  ["original", "Original format"],
+  ["original", "Original · no quality loss"],
+  ["mp4", "MP4 · copy original quality"],
+  ["compatible", "MP4 · re-encode (HQ)"],
   ["mp3", "MP3 · audio"],
 ];
 function metrics() {
@@ -118,6 +129,13 @@ function renderLibrary() {
   const grid = $("mediaGrid");
   grid.replaceChildren();
   const items = visible();
+  const focused = state.items.filter((r) => r.focused);
+  $("focusSummary").textContent = focused.length
+    ? `${focused.length} playing-video ${focused.length === 1 ? "match" : "candidates"} · ${state.items.length - focused.length} other sources tucked away. Check the match before downloading.`
+    : "No confident playing-video match. Play the video, then Find playing video. All grouped detections remain available.";
+  $("showAllSources").textContent = state.showAllSources
+    ? "Show playing video first"
+    : `Show all sources (${state.items.length})`;
   $("selectAll").checked =
     items.length > 0 && items.every((i) => state.selected.has(i.id));
   if (!items.length)
@@ -170,6 +188,11 @@ function renderLibrary() {
     tags.append(
       el(
         "span",
+        item.focused ? "tag green" : "tag",
+        item.confidence || "Added source",
+      ),
+      el(
+        "span",
         "tag",
         item.qualityLabel ||
           (["HLS", "DASH"].includes(item.kind)
@@ -184,7 +207,12 @@ function renderLibrary() {
     );
     const options = el("div", "card-options");
     const qs = [
-      ["best", "Best available"],
+      [
+        "best",
+        item.qualities?.[0]
+          ? `Best source · ${item.qualities[0]}p`
+          : "Best source available",
+      ],
       ...(item.qualities || []).map((h) => [String(h), h + "p"]),
     ];
     const quality = select(
@@ -194,19 +222,27 @@ function renderLibrary() {
     );
     quality.setAttribute("aria-label", "Quality for " + item.title);
     quality.disabled = !["HLS", "DASH"].includes(item.kind);
-    const format = select(
-      formats,
-      item.format || "mp4",
-      (v) => (item.format = v),
-    );
+    if (quality.disabled)
+      quality.options[0].textContent = item.height
+        ? `Original source · ${item.height}p`
+        : "Original source quality";
+    const format = select(formats, item.format || "original", (v) => {
+      item.format = v;
+      renderLibrary();
+    });
     format.setAttribute("aria-label", "Format for " + item.title);
     options.append(quality, format);
     const bottom = el("div", "card-bottom"),
       add = button("⇣  Add to queue", "primary", () => addJob(item));
-    const inspect = button("⋯", "icon-button", async () => {
+    const inspect = button("Find qualities", "secondary small", async () => {
       inspect.disabled = true;
       try {
         await inspectItem(item);
+        state.items = rankSources(
+          state.items,
+          state.players || [],
+          state.items,
+        );
         notify(
           "Source inspected. Available quality options have been updated.",
         );
@@ -218,7 +254,17 @@ function renderLibrary() {
     inspect.title = "Inspect quality & source";
     inspect.setAttribute("aria-label", "Inspect " + item.title);
     bottom.append(add, inspect);
-    body.append(title, host, tags, options, bottom);
+    const qualityNote = el(
+      "p",
+      "quality-note",
+      item.probeError ||
+        (item.format === "compatible"
+          ? "Re-encoding can change detail. Use Original to preserve source quality."
+          : item.inspected && !item.qualities?.length
+            ? "This source exposes one quality. Kenuxa does not invent higher resolutions."
+            : "Original copies source video and audio without re-encoding. Find qualities to inspect source renditions."),
+    );
+    body.append(title, host, tags, options, qualityNote, bottom);
     card.append(art, body);
     grid.append(card);
   }
@@ -232,6 +278,10 @@ async function inspectItem(item) {
     item.qualities = [
       ...new Set((p.variants || []).map((v) => v.height).filter(Boolean)),
     ].sort((a, b) => b - a);
+    item.variants = p.variants || [];
+    item.audioPlaylists = p.audio || [];
+    item.master = Boolean(p.variants?.length);
+    item.height = p.variants?.[0]?.height || item.height;
     item.qualityLabel = p.duration
       ? Math.round(p.duration) + " SEC · HLS"
       : "QUALITY OPTIONS";
@@ -243,7 +293,12 @@ async function inspectItem(item) {
     item.qualities = [
       ...new Set(
         [...doc.getElementsByTagNameNS("*", "Representation")]
-          .map((n) => Number(n.getAttribute("height")))
+          .map((n) =>
+            Number(
+              n.getAttribute("height") ||
+                n.parentElement?.getAttribute("height"),
+            ),
+          )
           .filter(Boolean),
       ),
     ].sort((a, b) => b - a);
@@ -251,6 +306,8 @@ async function inspectItem(item) {
     const r = await request(item.url, { method: "HEAD" });
     item.size = Number(r.headers.get("content-length")) || item.size;
   }
+  item.inspected = true;
+  item.probeError = "";
 }
 const watch = initWatch(api, notify);
 const VIEWS = [
@@ -331,7 +388,7 @@ function renderQueue() {
           " · " +
           (formats.find((f) => f[0] === j.format)?.[1] || j.format) +
           (j.quality && j.quality !== "best"
-            ? " · up to " + j.quality + "p"
+            ? " · " + j.quality + "p source"
             : ""),
       ),
     );
@@ -410,12 +467,21 @@ function chooseSharing(count = 1) {
   });
 }
 function enqueue(item, share) {
+  if (
+    state.queue.some(
+      (j) =>
+        j.url &&
+        sourceKey(j) === sourceKey(item) &&
+        !["failed", "cancelled", "complete"].includes(j.status),
+    )
+  )
+    return;
   const j = {
     ...item,
     id: crypto.randomUUID(),
     source: sourceFor(item),
     quality: item.quality || "best",
-    format: item.format || "mp4",
+    format: item.format || "original",
     sharePublic: share,
     watchSourceUrl: state.source.sourceUrl,
     status: "queued",
@@ -432,6 +498,29 @@ function enqueue(item, share) {
   runQueue();
 }
 async function addJob(item) {
+  if (
+    state.queue.some(
+      (j) =>
+        j.url &&
+        sourceKey(j) === sourceKey(item) &&
+        !["failed", "cancelled", "complete"].includes(j.status),
+    )
+  ) {
+    notify(
+      "This video is already in the queue. Change or finish that job before adding another copy.",
+    );
+    return;
+  }
+  if (["HLS", "DASH"].includes(item.kind) && !item.inspected) {
+    await inspectItem(item);
+    renderLibrary();
+    if (item.qualities?.length > 1) {
+      notify(
+        "Source qualities are ready. Choose a resolution, then Add to queue.",
+      );
+      return;
+    }
+  }
   const share = await chooseSharing();
   if (share !== null) enqueue(item, share);
 }
@@ -476,6 +565,7 @@ async function directPlan(j, request) {
       {
         kind: j.kind === "Audio" ? "audio" : "video",
         segments,
+        expectedSize: size,
         extension: ext,
         mime:
           meta?.headers.get("content-type") ||
@@ -520,6 +610,13 @@ async function downloadJob(j) {
       if (j.format === "mp3" && plan.tracks.some((t) => t.kind === "audio"))
         plan.tracks = plan.tracks.filter((t) => t.kind === "audio");
     } else plan = await directPlan(j, request);
+    j.actualHeight =
+      plan.quality?.height ||
+      plan.tracks.find((t) => t.kind === "video")?.height ||
+      j.height;
+    j.message = j.actualHeight
+      ? `Downloading ${j.actualHeight}p source · original quality`
+      : "Downloading original source bytes";
     collected = await collectTracks(
       plan,
       request,
@@ -557,7 +654,15 @@ async function downloadJob(j) {
   j.status = "complete";
   j.progress = 1;
   j.message =
-    bytes(result.blob.size) + " saved · " + result.extension.toUpperCase();
+    bytes(result.blob.size) +
+    " saved · " +
+    result.extension.toUpperCase() +
+    (j.actualHeight ? ` · ${j.actualHeight}p` : "") +
+    (j.format === "compatible"
+      ? " · HQ re-encode"
+      : j.format === "mp3"
+        ? ""
+        : " · source quality preserved");
   const entry = {
     id: j.downloadId,
     filename,
@@ -565,6 +670,13 @@ async function downloadJob(j) {
     date: new Date().toISOString(),
     format: result.extension,
     host: j.url ? new URL(j.url).hostname : "Local file",
+    height: j.actualHeight || null,
+    qualityMode:
+      j.format === "compatible"
+        ? "HQ re-encode"
+        : j.format === "mp3"
+          ? "Audio export"
+          : "Original bytes / stream copy",
   };
   // Downloaded bytes are saved to disk, not uploaded or duplicated in Home.
   state.history.unshift(entry);
@@ -908,7 +1020,9 @@ function renderHistory() {
           " · " +
           h.host +
           " · " +
-          bytes(h.bytes),
+          bytes(h.bytes) +
+          (h.height ? " · " + h.height + "p" : "") +
+          (h.qualityMode ? " · " + h.qualityMode : ""),
       ),
     );
     row.append(
@@ -920,25 +1034,82 @@ function renderHistory() {
   }
 }
 async function refreshSources() {
+  if (state.refreshing) return;
+  state.refreshing = true;
+  $("refresh").disabled = true;
+  try {
+    await discoverSources();
+  } finally {
+    state.refreshing = false;
+    $("refresh").disabled = false;
+  }
+}
+async function discoverSources() {
   if (state.source.sourceTabId === undefined) {
     notify("Open Kenuxa from the page that is playing your video.");
     return;
   }
-  const key = "tab-" + state.source.sourceTabId,
-    saved = await api.storage.session.get(key);
-  const incoming = saved[key] || [];
-  for (const item of incoming) {
-    const old = state.items.find((i) => i.url === item.url);
-    if (!old)
-      state.items.push({
-        ...item,
-        title: state.source.title || "Detected media",
-      });
+  const tabId = state.source.sourceTabId,
+    key = "tab-" + tabId;
+  const saved = await api.storage.session.get(key),
+    stored =
+      (await api.storage.session.get("players-" + tabId))["players-" + tabId] ||
+      [];
+  let players = [];
+  try {
+    players = await scanPlayers(api, tabId);
+  } catch (e) {
+    notify("Player inspection unavailable: " + e.message, true);
   }
+  state.players = players.map((p) => ({
+    ...p,
+    playedAt:
+      stored.find((s) => s.frameId === p.frameId && s.index === p.index)
+        ?.playedAt || p.observedAt,
+  }));
+  const direct = players.flatMap((p) =>
+    (p.urls || [])
+      .filter((url) => classify(url))
+      .map((url) => ({
+        id: crypto.randomUUID(),
+        url,
+        kind: classify(url),
+        frameId: p.frameId,
+        sourceOrigin: p.sourceOrigin,
+        time: Date.now(),
+        height: p.height,
+        width: p.width,
+      })),
+  );
+  const incoming = mergeCaptures([...(saved[key] || []), ...direct]);
+  const manual = state.items.filter((i) => i.manual);
+  state.items = rankSources(
+    [...incoming, ...manual],
+    state.players,
+    state.items,
+  ).map((i) => ({
+    ...i,
+    title: i.title || state.source.title || "Detected media",
+  }));
+  renderLibrary();
+  notify("Matching the playing video and reading source qualities…");
+  // Inspect a bounded set, starting with the playing-video candidates. Never flood the provider.
+  for (const item of state.items.slice(0, 6))
+    if (["HLS", "DASH"].includes(item.kind) && !item.inspected) {
+      try {
+        await inspectItem(item);
+      } catch (e) {
+        item.probeError = e.message;
+      }
+    }
+  state.items = rankSources(state.items, state.players, state.items);
+  state.selected = new Set(
+    [...state.selected].filter((id) => state.items.some((i) => i.id === id)),
+  );
   renderLibrary();
   notify(
-    incoming.length +
-      " sources found in the connected page. Refresh that page and press Play if your video is missing.",
+    state.items.length +
+      " grouped sources ready. Playing-video matches come first; Original preserves source quality.",
   );
 }
 function setFile(file) {
@@ -965,6 +1136,10 @@ document.querySelectorAll("[data-filter]").forEach(
     }),
 );
 $("search").oninput = renderLibrary;
+$("showAllSources").onclick = () => {
+  state.showAllSources = !state.showAllSources;
+  renderLibrary();
+};
 $("selectAll").onchange = () => {
   for (const item of visible())
     $("selectAll").checked
@@ -1039,6 +1214,7 @@ $("addForm").onsubmit = (e) => {
       kind,
       title: $("manualName").value.trim() || "Added media",
       frameId: 0,
+      manual: true,
     });
     $("addDialog").close();
     $("addForm").reset();
@@ -1098,7 +1274,7 @@ async function init() {
     const saved = await api.storage.session.get(key);
     state.source = saved[key] || {};
   }
-  state.items = (state.source.items || []).map((i) => ({
+  state.items = mergeCaptures(state.source.items || []).map((i) => ({
     ...i,
     title: i.title || state.source.title || "Detected media",
   }));
@@ -1113,5 +1289,6 @@ async function init() {
   renderQueue();
   renderHistory();
   showView(location.hash.slice(1) || "watch");
+  if (state.source.sourceTabId !== undefined) await refreshSources();
 }
 init().catch((e) => notify(e.message, true));

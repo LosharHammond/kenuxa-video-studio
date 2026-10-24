@@ -15,7 +15,7 @@
         /></a>
         <div><b>KENUXA</b><span>VIDEO STUDIO</span></div>
       </header>
-      <span class="tag">EFFECTIVE 23 OCTOBER 2026</span>
+      <span class="tag">EFFECTIVE 24 OCTOBER 2026</span>
       <h1>Your media. Your choice.</h1>
       <p class="lead">
         This policy describes Kenuxa Video Studio, including its optional Kenuxa
@@ -38,10 +38,15 @@
         pages to identify supported files and playlists. Captured URLs, stream
         type, size and page/frame details are kept in browser session storage,
         capped at 100 sources per tab and cleared on navigation or tab closure.
-        Scanning a page reads its video/audio source elements. The extension
-        does not collect general page text, form inputs, passwords, cookies,
-        payment data or advertising identifiers. Opening Studio from a page
-        brings its title and URL into the local workspace.
+        A media-only page script observes video/audio source URLs, playback
+        state, dimensions, duration and visible player size to prioritize the
+        playing video. These observations stay in bounded session storage (up to
+        120 player records per tab). A tab detection cache clears on navigation
+        or closure; an open Studio job can retain its source context for that
+        browser session. The extension does not collect general page text, form
+        inputs, passwords, cookies, payment data or advertising identifiers.
+        Opening Studio from a page brings its title and URL into the local
+        workspace.
       </p>
       <h2>When you share with everyone</h2>
       <p>

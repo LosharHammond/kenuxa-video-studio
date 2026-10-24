@@ -20,6 +20,12 @@ export function classify(url, mime = "") {
   if (/\.mpd(?:[?#]|$)/i.test(url) || /dash\+xml/i.test(mime)) return "DASH";
   if (/\.(m4s|cmfv|cmfa|ts)(?:[?#]|$)/i.test(url)) return null;
   if (
+    /(?:^|\/)(?:(?:init|initialization)(?:[-_][^/?]*)?|(?:segment|chunk)[-_.\d][^/?]*)\.mp4(?:[?#]|$)/i.test(
+      url,
+    )
+  )
+    return null;
+  if (
     /\.(mp3|m4a|aac|ogg|opus|wav|flac)(?:[?#]|$)/i.test(url) ||
     /^audio\//i.test(mime)
   )
@@ -135,9 +141,14 @@ export function chooseQuality(variants, height = "best") {
   const sorted = [...variants].sort(
     (a, b) => b.height - a.height || b.bandwidth - a.bandwidth,
   );
-  return height === "best"
-    ? sorted[0]
-    : sorted.find((v) => v.height <= Number(height)) || sorted.at(-1);
+  if (!sorted.length) throw Error("No media qualities are available.");
+  if (height === "best") return sorted[0];
+  const exact = sorted.find((v) => v.height === Number(height));
+  if (!exact)
+    throw Error(
+      `The requested ${height}p source is no longer available. Refresh qualities and choose again; no lower quality was substituted.`,
+    );
+  return exact;
 }
 export async function planHls(
   url,
@@ -145,7 +156,7 @@ export async function planHls(
   quality = "best",
   audioOnly = false,
 ) {
-  let chosenAudio;
+  let chosenAudio, selectedQuality;
   for (let depth = 0; depth < 6; depth++) {
     const r = await request(url),
       p = parseHls(await r.text(), r.url || url);
@@ -155,9 +166,15 @@ export async function planHls(
         const ap = await planHls(chosenAudio, request, "best", true);
         tracks.push({ ...ap.tracks[0], kind: "audio" });
       }
-      return { tracks, duration: p.duration };
+      return { tracks, duration: p.duration, quality: selectedQuality };
     }
     const variant = chooseQuality(p.variants, quality);
+    if (variant.height || !selectedQuality)
+      selectedQuality = {
+        height: variant.height,
+        bandwidth: variant.bandwidth,
+        codecs: variant.codecs,
+      };
     const alternatives = p.audio.filter(
       (a) => a["GROUP-ID"] === variant.audioGroup,
     );
@@ -234,7 +251,8 @@ export function parseDash(xml, base, quality = "best") {
     const representations = reps.map((node) => ({
       node,
       id: node.getAttribute("id"),
-      height: Number(node.getAttribute("height")) || 0,
+      height:
+        Number(node.getAttribute("height") || set.getAttribute("height")) || 0,
       bandwidth: Number(node.getAttribute("bandwidth")) || 0,
     }));
     const selected = chooseQuality(
@@ -421,6 +439,25 @@ export async function collectTracks(
             }
           }
           const bytes = new Uint8Array(await response.arrayBuffer());
+          if (!bytes.byteLength)
+            throw Error(
+              "The provider returned an empty media part. No incomplete file was saved.",
+            );
+          if (
+            segment.range &&
+            bytes.byteLength !== segment.range.end - segment.range.start + 1
+          )
+            throw Error(
+              "A media byte range was truncated. No incomplete file was saved.",
+            );
+          if (
+            /text\/html|application\/(json|xhtml)/i.test(
+              response.headers?.get?.("content-type") || "",
+            )
+          )
+            throw Error(
+              "The provider returned a page instead of media. Refresh the source; no incomplete file was saved.",
+            );
           size += bytes.byteLength;
           if (size > MAX_BYTES)
             throw Error(
@@ -440,6 +477,13 @@ export async function collectTracks(
     const rejected = results.find((r) => r.status === "rejected");
     if (rejected) throw rejected.reason;
     await control.checkpoint();
+    if (
+      track.expectedSize &&
+      parts.reduce((n, p) => n + p.byteLength, 0) !== track.expectedSize
+    )
+      throw Error(
+        "The downloaded file size does not match the source. No incomplete file was saved.",
+      );
     output.push({ ...track, blob: new Blob(parts, { type: track.mime }) });
   }
   return { tracks: output, size };

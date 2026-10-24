@@ -1,5 +1,6 @@
 import "./browser-bridge.mjs";
 import { classify } from "./media.mjs";
+import { mergeCaptures } from "./detection.mjs";
 let queue = Promise.resolve();
 chrome.action.setBadgeBackgroundColor({ color: "#8861e8" });
 chrome.webRequest.onHeadersReceived.addListener(
@@ -40,8 +41,11 @@ chrome.webRequest.onHeadersReceived.addListener(
             ? new URL(d.initiator || d.originUrl || d.documentUrl).origin
             : undefined,
           time: Date.now(),
+          firstSeen: existing?.firstSeen || existing?.time || Date.now(),
         };
-        const rows = [row, ...old.filter((r) => r.url !== d.url)].slice(0, 100);
+        const rows = mergeCaptures([...old, row])
+          .sort((a, b) => b.time - a.time)
+          .slice(0, 100);
         await chrome.storage.session.set({ [key]: rows });
         await chrome.action.setBadgeText({
           tabId: d.tabId,
@@ -58,7 +62,10 @@ chrome.webRequest.onBeforeRequest.addListener(
     queue = queue
       .catch(() => {})
       .then(async () => {
-        await chrome.storage.session.remove("tab-" + d.tabId);
+        await chrome.storage.session.remove([
+          "tab-" + d.tabId,
+          "players-" + d.tabId,
+        ]);
         await chrome.action.setBadgeText({ tabId: d.tabId, text: "" });
       });
   },
@@ -67,5 +74,42 @@ chrome.webRequest.onBeforeRequest.addListener(
 chrome.tabs.onRemoved.addListener((id) => {
   queue = queue
     .catch(() => {})
-    .then(() => chrome.storage.session.remove("tab-" + id));
+    .then(() => chrome.storage.session.remove(["tab-" + id, "players-" + id]));
+});
+chrome.runtime.onMessage.addListener((message, sender) => {
+  if (
+    message?.type !== "kenuxa-playback" ||
+    !Number.isInteger(sender.tab?.id) ||
+    !Array.isArray(message.players)
+  )
+    return;
+  const key = "players-" + sender.tab.id;
+  queue = queue
+    .catch(() => {})
+    .then(async () => {
+      const saved = (await chrome.storage.session.get(key))[key] || [];
+      const players = message.players.slice(0, 30).map((p) => ({
+        frameId: sender.frameId || 0,
+        index: Number(p.index) || 0,
+        urls: (p.urls || [])
+          .filter((u) => typeof u === "string" && /^https?:/.test(u))
+          .slice(0, 8),
+        playing: p.playing === true,
+        focused: p.focused === true,
+        visible: p.visible === true,
+        width: Number(p.width) || 0,
+        height: Number(p.height) || 0,
+        area: Number(p.area) || 0,
+        duration: Number(p.duration) || 0,
+        playedAt: Math.min(Number(p.playedAt) || 0, Date.now()),
+        observedAt: Date.now(),
+        sourceOrigin: sender.origin || new URL(sender.url).origin,
+      }));
+      await chrome.storage.session.set({
+        [key]: [
+          ...saved.filter((p) => p.frameId !== (sender.frameId || 0)),
+          ...players,
+        ].slice(-120),
+      });
+    });
 });

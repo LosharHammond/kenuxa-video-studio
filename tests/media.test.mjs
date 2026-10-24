@@ -32,7 +32,7 @@ await test("HLS quality, alternate audio, and relative query URLs", () => {
     '#EXTM3U\n#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",DEFAULT=YES,URI="audio.m3u8?a=x,y"\n#EXT-X-STREAM-INF:BANDWIDTH=10,RESOLUTION=640x360,AUDIO="aud"\n360.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=20,RESOLUTION=1920x1080,AUDIO="aud"\n1080.m3u8',
     "https://a/base/master.m3u8",
   );
-  assert.equal(chooseQuality(p.variants, "720").height, 360);
+  assert.throws(()=>chooseQuality(p.variants, "720"),/no lower quality was substituted/);
   assert.equal(chooseQuality(p.variants).height, 1080);
   assert.equal(p.audio[0].url, "https://a/base/audio.m3u8?a=x,y");
 });

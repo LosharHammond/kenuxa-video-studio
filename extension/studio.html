@@ -45,7 +45,7 @@
             Video processing stays in your browser. Share source links only when
             you choose.
           </p>
-          <span class="version">KENUXA ENGINE 2.4</span>
+          <span class="version">KENUXA ENGINE 2.5</span>
         </div>
         <div class="sidebar-footer">
           <img src="icons/icon32.png" width="25" height="25" alt="" /><span
@@ -218,7 +218,7 @@
                 >
               </div>
               <button id="refresh" class="secondary small">
-                ↻ Refresh sources
+                ◎ Find playing video
               </button>
             </div>
             <div class="section-header">
@@ -227,7 +227,10 @@
                   Media library
                   <span id="libraryTotal" class="count-chip">0</span>
                 </h2>
-                <p>Videos and audio detected while you browse.</p>
+                <p>
+                  Playing video first. Choose a source resolution and save
+                  without quality loss.
+                </p>
               </div>
               <div class="search">
                 <span>⌕</span
@@ -237,6 +240,17 @@
                   placeholder="Search media or host…"
                 />
               </div>
+            </div>
+            <div class="focus-panel">
+              <div>
+                <strong>Focused capture</strong>
+                <p id="focusSummary" role="status">
+                  Finding your playing video…
+                </p>
+              </div>
+              <button id="showAllSources" class="secondary small">
+                Show all sources
+              </button>
             </div>
             <div class="toolbar">
               <div class="filters" role="group" aria-label="Media filters">
@@ -309,9 +323,9 @@
                 <div class="form-row">
                   <label
                     >Output format<select id="convertFormat">
-                      <option value="mp4">MP4 · fast remux</option>
+                      <option value="mp4">MP4 · copy original quality</option>
                       <option value="compatible">
-                        MP4 · H.264 / AAC compatible
+                        MP4 · high-quality H.264 / AAC re-encode
                       </option>
                       <option value="mp3">MP3 · audio only</option>
                     </select></label
@@ -325,9 +339,10 @@
                 <div class="eyebrow">BUILT-IN MEDIA ENGINE</div>
                 <h3>Ready for your<br />next creation.</h3>
                 <p>
-                  Fast MP4 preserves compatible codecs. Compatible MP4
-                  re-encodes to H.264 and AAC for wider editing and playback
-                  support.
+                  MP4 copy preserves compatible video and audio without
+                  re-encoding. High-quality MP4 re-encodes at CRF 18 with 256
+                  kbps AAC; it can change detail. Neither option invents
+                  resolution missing from the source.
                 </p>
                 <hr />
                 <p>
@@ -404,7 +419,7 @@
             </div>
           </section>
           <footer class="workspace-foot">
-            <span>KENUXA VIDEO STUDIO <b>2.4</b></span
+            <span>KENUXA VIDEO STUDIO <b>2.5</b></span
             ><span
               >Built for your workflow.<a
                 href="https://losharhammond.github.io/kenuxa-video-studio/privacy.html"

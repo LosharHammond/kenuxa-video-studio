@@ -1,4 +1,4 @@
-# Reviewer notes — 2.4.0
+# Reviewer notes — 2.5.0
 
 All first-party JavaScript, CSS and HTML are readable source in extension/. No runtime remote code, eval-based remote logic or downloaded WASM exists. The only remote Kenuxa endpoint returns JSON source-listing metadata. It is not an executable-code service.
 
@@ -25,3 +25,6 @@ The Watch service stores only source metadata and reports. It never stores/proxi
 No advertising, affiliates, external payment system or subscription.
 
 See [dependency provenance](dependency-provenance.md) for release source commits, binary hashes and the one unmodified-upstream validator warning.
+
+
+2.5 observes media-only player state, dimensions, duration and source URLs locally through playback.js. No page text or form fields are read. Sources are grouped conservatively, master playlists own their children, and exact requested resolutions never silently fall back. Original download is default; MP4 copy preserves encoded streams. Explicit re-encode uses CRF 18/AAC 256k without scaling. See docs/quality-upgrade-2.5.md.

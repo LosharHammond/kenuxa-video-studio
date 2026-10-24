@@ -17,9 +17,9 @@ jobs:
       - run: |
           mkdir -p artifacts
           for browser in chromium edge opera firefox; do
-            (cd dist/$browser && zip -qr ../../artifacts/kenuxa-$browser-v2.4.zip .)
+            (cd dist/$browser && zip -qr ../../artifacts/kenuxa-$browser-v2.5.zip .)
           done
       - uses: actions/upload-artifact@v4
         with:
-          name: kenuxa-browser-packages-2.4
+          name: kenuxa-browser-packages-2.5
           path: artifacts/*.zip

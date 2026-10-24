@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Kenuxa Video Studio",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "minimum_chrome_version": "109",
   "description": "Save supported web media, convert files locally, and discover original video sources with sharing by choice.",
   "permissions": [
@@ -12,6 +12,14 @@
     "scripting"
   ],
   "host_permissions": ["http://*/*", "https://*/*"],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["playback.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"

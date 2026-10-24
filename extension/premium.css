@@ -921,3 +921,47 @@ input[type="checkbox"] {
     padding: 23px;
   }
 }
+:root {
+  --kenuxa-capture-version: 2.5;
+}
+.focus-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 24px;
+  margin: 0 0 22px;
+  border: 1px solid #8d6cd85c;
+  border-radius: 18px;
+  background: linear-gradient(110deg, #30213e, #181820);
+}
+.focus-panel strong {
+  color: #d9c6ff;
+  font-size: 15px;
+}
+.focus-panel p,
+.quality-note {
+  color: #b6b1c5;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 6px 0 0;
+}
+.focus-panel button {
+  flex-shrink: 0;
+}
+.card-options {
+  flex-wrap: wrap;
+}
+.card-options select {
+  min-width: 0;
+  max-width: 100%;
+}
+.quality-note {
+  min-height: 38px;
+}
+@media (max-width: 800px) {
+  .focus-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

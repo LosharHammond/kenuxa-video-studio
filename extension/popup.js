@@ -1,14 +1,51 @@
 import "./browser-bridge.mjs";
 import { classify } from "./media.mjs";
+import { scanPlayers, rankSources, mergeCaptures } from "./detection.mjs";
 const $ = (id) => document.getElementById(id);
 let active;
 async function current() {
   [active] = await chrome.tabs.query({ active: true, currentWindow: true });
   const key = "tab-" + active.id;
   const state = await chrome.storage.session.get(key);
-  $("count").textContent = (state[key] || []).length;
+  let players = [];
+  try {
+    players = await scanPlayers(chrome, active.id);
+  } catch {}
+  const stored =
+    (await chrome.storage.session.get("players-" + active.id))[
+      "players-" + active.id
+    ] || [];
+  players = players.map((p) => ({
+    ...p,
+    playedAt:
+      stored.find((s) => s.frameId === p.frameId && s.index === p.index)
+        ?.playedAt || p.observedAt,
+  }));
+  const direct = players.flatMap((p) =>
+    p.urls
+      .filter((url) => classify(url))
+      .map((url) => ({
+        id: crypto.randomUUID(),
+        url,
+        kind: classify(url),
+        frameId: p.frameId,
+        sourceOrigin: p.sourceOrigin,
+        time: Date.now(),
+        height: p.height,
+        width: p.width,
+      })),
+  );
+  const captures = mergeCaptures([...(state[key] || []), ...direct]).slice(
+    -100,
+  );
+  await chrome.storage.session.set({ [key]: captures });
+  const rows = rankSources(captures, players);
+  $("count").textContent = rows.length;
   $("source").textContent = active.title || "Current tab";
-  return state[key] || [];
+  $("message").textContent = rows.some((r) => r.focused)
+    ? "Playing video prioritized. Open Studio to choose source quality."
+    : "No confident player match. Studio keeps other detections available for review.";
+  return rows;
 }
 async function open(view = "library") {
   const items = await current();
@@ -40,37 +77,7 @@ $("open").onclick = () => open().catch(error);
 $("converter").onclick = () => open("convert").catch(error);
 $("scan").onclick = async () => {
   try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: active.id, allFrames: true },
-      func: () =>
-        [...document.querySelectorAll("video,audio")]
-          .flatMap((e) => [
-            e.currentSrc,
-            e.src,
-            ...[...e.querySelectorAll("source")].map((s) => s.src),
-          ])
-          .filter((u) => /^https?:/.test(u))
-          .map((url) => ({ url, sourceOrigin: location.origin })),
-    });
-    const key = "tab-" + active.id,
-      state = await chrome.storage.session.get(key),
-      items = state[key] || [];
-    for (const frame of results)
-      for (const item of frame.result || []) {
-        const kind = classify(item.url);
-        if (kind && !items.some((x) => x.url === item.url))
-          items.push({
-            ...item,
-            id: crypto.randomUUID(),
-            kind,
-            frameId: frame.frameId,
-            time: Date.now(),
-          });
-      }
-    await chrome.storage.session.set({ [key]: items.slice(0, 100) });
     await current();
-    $("message").textContent =
-      "Scan complete. If nothing appeared, refresh the page and play the video.";
   } catch (e) {
     error(e);
   }
