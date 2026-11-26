@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Kenuxa Video Studio",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "minimum_chrome_version": "109",
   "description": "Save supported web media, convert files locally, and discover original video sources with sharing by choice.",
   "permissions": [

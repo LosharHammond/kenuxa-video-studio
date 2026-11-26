@@ -1,4 +1,5 @@
 import "./browser-bridge.mjs";
+import { scanEpisodes, resolveEpisode } from "./series.mjs";
 import {
   classify,
   urlOf,
@@ -60,6 +61,7 @@ function notify(text, error = false) {
   $("notice").className = "notice" + (error ? " error" : "");
 }
 function sourceFor(item) {
+  if (item.source) return item.source;
   return {
     sourceTabId: state.source.sourceTabId,
     sourceOrigin: item.sourceOrigin || state.source.sourceOrigin,
@@ -641,7 +643,9 @@ async function downloadJob(j) {
   await j.control.checkpoint();
   j.status = "saving";
   j.progress = 0.95;
-  j.message = "Choose a save location. Waiting for the browser to finish…";
+  j.message = j.episode
+    ? "Saving to your series folder. Waiting for the browser to finish…"
+    : "Choose a save location. Waiting for the browser to finish…";
   renderQueue();
   const filename =
     cleanName(
@@ -910,7 +914,12 @@ async function saveBlob(blob, filename, j) {
   const blobUrl = URL.createObjectURL(blob);
   let id;
   try {
-    id = await api.downloads.download({ url: blobUrl, filename, saveAs: true });
+    id = await api.downloads.download({
+      url: blobUrl,
+      filename: j.episode ? `${j.seriesFolder}/${filename}` : filename,
+      saveAs: !j.episode,
+      conflictAction: "uniquify",
+    });
     j.downloadId = id;
     if (j.control.cancelled) {
       await api.downloads.cancel(id);
@@ -977,7 +986,23 @@ async function runQueue() {
     for (;;) {
       const j = state.queue.find((j) => j.status === "queued");
       if (!j) break;
+      let episodeTabId;
       try {
+        if (j.episode) {
+          j.status = "downloading";
+          j.progress = 0;
+          j.downloadId = undefined;
+          renderQueue();
+          const resolved = await resolveEpisode(api, j.episode, j.control, message => {
+            j.message = message;
+            updateJob(j);
+          });
+          episodeTabId = resolved.tabId;
+          // Resolve again on retry: signed media URLs may have expired.
+          j.url = resolved.url;
+          j.kind = resolved.kind;
+          j.source = resolved.source;
+        }
         await downloadJob(j);
       } catch (e) {
         j.status =
@@ -989,6 +1014,9 @@ async function runQueue() {
             ? "Download cancelled."
             : e.message || String(e);
         if (j.localFile) $("convertStatus").textContent = j.message;
+      } finally {
+        if (episodeTabId !== undefined)
+          await api.tabs.remove(episodeTabId).catch(() => {});
       }
       renderQueue();
       renderHistory();
@@ -1268,6 +1296,73 @@ window.addEventListener("beforeunload", (e) => {
     e.returnValue = "";
   }
 });
+let episodes = [];
+async function findEpisodes() {
+  if (!Number.isInteger(state.source.sourceTabId))
+    throw Error("Open Studio using the extension on a series or episode page first.");
+  $("findEpisodes").disabled = true;
+  $("seriesStatus").textContent = "Looking for episode links…";
+  try {
+    episodes = await scanEpisodes(api, state.source.sourceTabId);
+    $("episodeList").replaceChildren();
+    $("selectEpisodes").checked = true;
+    $("seriesControls").hidden = !episodes.length;
+    for (const episode of episodes) {
+      const label = el("label", "check"), input = el("input");
+      input.type = "checkbox";
+      input.checked = true;
+      input.value = episode.number;
+      input.onchange = () => {
+        const checks = [...$("episodeList").querySelectorAll("input")];
+        $("selectEpisodes").checked = checks.every(c => c.checked);
+        $("selectEpisodes").indeterminate = checks.some(c => c.checked) && !checks.every(c => c.checked);
+      };
+      label.append(input, document.createTextNode(`Episode ${episode.number}`));
+      $("episodeList").append(label);
+    }
+    $("seriesStatus").textContent = episodes.length
+      ? `${episodes.length} episodes found, ordered by episode number.`
+      : "No supported episode links found. Expand the site's episode list and try again. Supported links end in /episode-1 or /episode/1.";
+  } catch (error) {
+    $("seriesStatus").textContent = error.message;
+    throw error;
+  } finally {
+    $("findEpisodes").disabled = false;
+  }
+}
+$("findEpisodes").onclick = () => findEpisodes().catch(e => notify(e.message, true));
+$("selectEpisodes").onchange = () => {
+  $("selectEpisodes").indeterminate = false;
+  for (const input of $("episodeList").querySelectorAll("input"))
+    input.checked = $("selectEpisodes").checked;
+};
+$("queueEpisodes").onclick = async () => {
+  const selected = new Set([...$("episodeList").querySelectorAll("input:checked")].map(c => Number(c.value)));
+  const items = episodes.filter(e => selected.has(e.number) && !state.queue.some(j =>
+    j.episode?.pageUrl === e.pageUrl && !["failed", "cancelled"].includes(j.status)));
+  if (!items.length) return notify("Select episodes that are not already queued or completed.");
+  $("queueEpisodes").disabled = true;
+  try {
+    const share = await chooseSharing(items.length);
+    if (share === null) return;
+    const title = (state.source.title || "Series").split("|")[0].replace(/\s*[-–·:]?\s*Episode\s+\d+.*$/i, "").trim();
+    for (const episode of items) state.queue.push({
+      id: crypto.randomUUID(), episode, title: `${title} - Episode ${String(episode.number).padStart(3, "0")}`,
+      seriesFolder: cleanName(title), kind: "Episode", quality: "best", format: $("seriesFormat").value,
+      watchSourceUrl: episode.pageUrl, sharePublic: share, status: "queued", progress: 0, control: makeControl(),
+    });
+    metrics();
+    renderQueue();
+    showView("queue");
+    notify(`${items.length} episodes queued. Keep Studio open until the batch finishes.`);
+    runQueue();
+  } catch (error) {
+    notify(error.message, true);
+  } finally {
+    $("queueEpisodes").disabled = false;
+  }
+};
+
 async function init() {
   const key = new URL(location.href).searchParams.get("job");
   if (key) {

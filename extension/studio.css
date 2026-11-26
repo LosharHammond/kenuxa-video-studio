@@ -1701,3 +1701,7 @@ dialog .share-check {
     padding: 10px 12px;
   }
 }
+/* Series selection remains scrollable even for long seasons. */
+.series-panel { margin-bottom: 24px; }
+.episode-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-height: 280px; overflow: auto; margin-top: 16px; }
+#seriesControls > label, #seriesControls > button { margin-right: 16px; margin-top: 12px; }

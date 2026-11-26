@@ -45,7 +45,7 @@
             Video processing stays in your browser. Share source links only when
             you choose.
           </p>
-          <span class="version">KENUXA ENGINE 2.5</span>
+          <span class="version">KENUXA ENGINE 2.6</span>
         </div>
         <div class="sidebar-footer">
           <img src="icons/icon32.png" width="25" height="25" alt="" /><span
@@ -183,6 +183,21 @@
             <div id="homeGrid" class="video-grid"></div>
           </section>
           <section id="libraryView" class="view" hidden>
+            <section class="panel series-panel" aria-labelledby="seriesHeading">
+              <div class="section-head">
+                <div><h2 id="seriesHeading">Download a series</h2>
+                  <p>Find episodes on the connected page, then queue all or choose a selection.</p></div>
+                <button id="findEpisodes" class="secondary small">Find episodes</button>
+              </div>
+              <p id="seriesStatus" role="status">Open Studio from a series or episode page to begin.</p>
+              <div id="seriesControls" hidden>
+                <label class="check"><input id="selectEpisodes" type="checkbox" checked /> Select all episodes</label>
+                <label>Save as <select id="seriesFormat"><option value="original">Original quality</option><option value="mp4">MP4 · copy original quality</option></select></label>
+                <button id="queueEpisodes" class="primary small">Queue selected episodes</button>
+                <p>Files save in an episode folder in Downloads. Keep Studio open. Browser download prompts may still apply.</p>
+              </div>
+              <div id="episodeList" class="episode-list"></div>
+            </section>
             <div class="stats-grid">
               <article class="stat">
                 <span class="stat-icon violet">▣</span>
@@ -419,7 +434,7 @@
             </div>
           </section>
           <footer class="workspace-foot">
-            <span>KENUXA VIDEO STUDIO <b>2.5</b></span
+            <span>KENUXA VIDEO STUDIO <b>2.6</b></span
             ><span
               >Built for your workflow.<a
                 href="https://losharhammond.github.io/kenuxa-video-studio/privacy.html"
