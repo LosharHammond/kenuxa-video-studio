@@ -2,7 +2,7 @@
 
 A browser workspace for supported media downloads, local file conversion and optional source-link sharing through Kenuxa Watch.
 
-**Status:** 2.5 release candidate. This upgrade improves focus, deduplication and preservation of source quality. The earlier 2.4 packages were submitted to Opera and Firefox; this 2.5 build is a new review candidate. This repository is not proof of an approved store listing.
+**Status:** 2.6 release candidate. Adds series episode selection and sequential batch downloads on top of the 2.5 capture and quality improvements. This repository is not proof of an approved store listing.
 
 See [the focused capture and quality upgrade](docs/quality-upgrade-2.5.md) for the new download flow and its verification.
 
@@ -10,11 +10,27 @@ See [the focused capture and quality upgrade](docs/quality-upgrade-2.5.md) for t
 
 - Detects direct media, complete unencrypted HLS and common static DASH sources while you browse.
 - Offers quality selection, a download queue, pause/retry and completion tracking.
+- Finds episode links on series pages and queues selected episodes in numerical order, resolving a fresh media source for each episode.
 - Bundles FFmpeg WebAssembly for local MP4 remux, H.264/AAC conversion and MP3 export.
 - Shows Kenuxa Watch inside the extension. Everyone is a shared feed; Saved privately stays in your browser.
 - Requires explicit consent before sharing a title and original public webpage link. Downloaded files and captured streaming tokens are not uploaded.
 
 Supported player embeds: YouTube, public Vimeo and Dailymotion. Other sources open at their original websites. Providers control whether an embed plays. DRM, encrypted/live manifests, paywall bypass and universal website extraction are not supported. Input jobs are capped at 256 MB; page-origin transfers are capped at 32 MB each.
+
+## Download a series
+
+1. Open the series or an episode page, then open Video Studio from the extension.
+2. In Media library, choose **Find episodes**. Expand the website's episode list first if needed.
+3. Keep all episodes selected or select the ones you want. Choose Original quality or MP4, then **Queue selected episodes**.
+4. Choose private downloads or opt into public source-link sharing once for the selection. Keep Studio open until the batch finishes.
+
+Each episode opens in a temporary background tab. Kenuxa starts the player muted, detects its supported media and pauses playback to avoid automatic episode navigation during the download. That tab stays open until saving finishes, then closes before the next episode starts. Failed episodes remain in the queue for retry; the rest continue. Retrying resolves a fresh media URL.
+
+Files use numbered names such as `Series title/Series title - Episode 001.mp4` in the browser's Downloads location. Batch jobs do not request a Save As dialog for each file, but browser download settings and permission prompts still apply. Original streams may save in a different container; choose MP4 for MP4 stream-copy packaging.
+
+Discovery supports same-site `/series/name/episode-1` links, including DramaTip, and `/episode/1` or `/episode-1` links inside explicit episode-list containers. It does not infer hidden or locked episodes. If a site blocks background playback, open the temporary episode tab and press Play. A missing or ambiguous player becomes a failed job after the discovery window. The usual DRM, encryption, size and transfer limits still apply. The queue is held in the open Studio session; closing Studio ends it.
+
+Validation includes a 30-episode link fixture captured from the supplied DramaTip page, selection and source-matching tests, cancellation/timeout cleanup, and a Studio integration test using mocked browser APIs that verifies sequential saving and continuation after a failure. Full-series downloading in an installed browser extension remains a manual check.
 
 ## Build
 
