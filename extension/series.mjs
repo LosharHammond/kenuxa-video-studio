@@ -1,5 +1,5 @@
 import { classify, parseHls } from "./media.mjs";
-import { scanPlayers, rankSources } from "./detection.mjs";
+import { scanPlayers, rankSources, sourceKey } from "./detection.mjs";
 import { requester } from "./requests.mjs";
 
 // Self-contained so it can run in the connected page without loading site code.
@@ -64,6 +64,20 @@ export function chooseEpisodeSource(rows, players) {
   const streams = matches.filter(r => ["HLS", "DASH"].includes(r.kind));
   if (streams.length === 1) return streams[0];
   if (!streams.length && matches.length === 1) return matches[0];
+  if (matches.length) return null;
+  // Loaded media can be downloadable before playback starts (for example while
+  // the player is waiting on its key service). Do not require decoded frames.
+  const visible = players.filter(p => p.visible);
+  if (visible.length !== 1) return null;
+  const loading = visible[0];
+  const inFrame = ranked.filter(r => (r.frameId || 0) === (loading.frameId || 0) && r.kind !== "Audio");
+  const exact = inFrame.filter(r => (loading.urls || []).some(url =>
+    sourceKey({url,frameId:loading.frameId}) === sourceKey(r)));
+  if (exact.length === 1) return { ...exact[0], confidence: "Loaded player source" };
+  const playlists = inFrame.filter(r => ["HLS", "DASH"].includes(r.kind));
+  if (playlists.length === 1 && playlists[0].master &&
+      playlists[0].variants?.some(v => v.height > 0))
+    return { ...playlists[0], confidence: "Loaded video playlist; playback not required" };
   return null;
 }
 
@@ -78,7 +92,7 @@ export async function resolveEpisode(api, episode, control, onStatus = () => {},
   try {
     let deadline = Date.now() + timeout;
     const inspected = new Map();
-    onStatus("Loading episode. If playback is blocked, open the episode tab and press Play.");
+    onStatus("Loading the episode stream; playback does not need to progress. If the player does not initialize, open the episode tab and press Play.");
     while (Date.now() < deadline) {
       const beforePause = Date.now();
       await control.checkpoint();

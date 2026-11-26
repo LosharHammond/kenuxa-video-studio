@@ -2,7 +2,7 @@
 
 A browser workspace for supported media downloads, local file conversion and optional source-link sharing through Kenuxa Watch.
 
-**Status:** 2.6.1 release candidate. Fixes DramaTip player startup, adds standard HLS AES-128 decoding and pauses blocked series batches. This repository is not proof of an approved store listing.
+**Status:** 2.6.2 release candidate. Matches unambiguous loaded streams before playback and retries temporary HLS key-service failures. Includes the 2.6.1 DramaTip startup and AES-128 fixes. This repository is not proof of an approved store listing.
 
 See [the focused capture and quality upgrade](docs/quality-upgrade-2.5.md) for the new download flow and its verification.
 
@@ -31,6 +31,10 @@ Files use numbered names such as `Series title/Series title - Episode 001.mp4` i
 Discovery supports same-site `/series/name/episode-1` links, including DramaTip, and `/episode/1` or `/episode-1` links inside explicit episode-list containers. It does not infer hidden or locked episodes. If a site blocks background playback, press Retry, open the temporary episode tab and press Play during discovery. A missing or ambiguous player pauses the batch after the discovery window. The queue is held in the open Studio session; closing Studio ends it.
 
 AES-128 follows [RFC 8216](https://www.rfc-editor.org/rfc/rfc8216): each segment uses its declared key and explicit IV or media-sequence IV. Key rotation and explicitly encrypted initialization maps are supported. Keys are held only in memory during the job and are never added to download history or Watch. On DramaTip, IDrama identity keys use the same-origin key route used by the site's player. HTTP access refusals remain refusals; no license requests, credentials or authentication rules are modified.
+
+Playback does not have to progress. A single visible loaded player can match its exact media URL, or a single parsed video master playlist after its audio/video children have been grouped. Multiple unrelated playlists remain ambiguous. The extension still initializes the site's own player in a temporary tab; it does not decode the site's source descriptors or replace the source lookup with `/api/play` (the inspected player uses that endpoint for play-event reporting).
+
+Temporary HLS key failures, including HTTP 502, retry up to three times with short backoff. Parallel segments share those key attempts. A lasting key outage pauses the batch with a key-service error and saves no partial file; HTTP access refusals are not retried. **Retry** on the failed episode resolves a fresh source and tries that episode again. **Resume remaining episodes** continues the other queued jobs and skips the failed one.
 
 Validation includes a 30-episode link fixture, AES-CBC fixtures encrypted independently with Node's crypto API, key rotation and malformed-key checks, and a Studio integration test that verifies sequential saving, ordinary-failure continuation, DRM-triggered pausing and explicit resume. DramaTip's native autoplay route was checked live and creates the video element. Full-series downloading in an installed browser extension remains a manual check.
 

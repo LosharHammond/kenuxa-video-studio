@@ -146,7 +146,8 @@ export function requester(api, source, control) {
           "HTTP 451: the provider reports a restriction. Kenuxa cannot override it. " +
           text;
       const e = Error(message);
-      e.noRetry = [400, 401, 403, 404, 410, 451].includes(response.status);
+      e.status = response.status;
+      e.noRetry = response.status >= 400 && response.status < 500 && ![408, 429].includes(response.status);
       throw e;
     }
     if (options.range) {

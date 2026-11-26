@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createCipheriv } from "node:crypto";
 import { parseHls, planHls, collectTracks, makeControl } from "../extension/media.mjs";
-import { hlsKeyRequestUrl } from "../extension/requests.mjs";
+import { hlsKeyRequestUrl, requester } from "../extension/requests.mjs";
 
 const base = "https://media.example/season/episode.m3u8";
 const keyA = Buffer.from("00112233445566778899aabbccddeeff", "hex");
@@ -101,5 +101,50 @@ test("refused and malformed keys pause the batch and never return a partial file
     };
     await assert.rejects(collectTracks({tracks:[parsed]},request,makeControl()),e=>e.stopBatch===true);
     assert.equal(keyCalls,1);
+  }
+});
+
+test("temporary key-service 502 responses retry once per shared key, without redownloading segments", async () => {
+  const parsed=parseHls('#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="key"\n#EXTINF:1,\na.ts\n#EXTINF:1,\nb.ts\n#EXT-X-ENDLIST',base);
+  let keyCalls=0,segmentCalls=0;
+  const plain=Buffer.from('downloadable even when the site player is waiting on a key');
+  const request=async url=>{
+    if(url.endsWith('/key')) {
+      if(++keyCalls<3)throw Object.assign(Error('Bad gateway'),{status:502});
+      return new Response(keyA);
+    }
+    segmentCalls++;
+    const index=url.endsWith('/a.ts')?0:1;
+    return new Response(encrypted(plain,keyA,parsed.segments[index].encryption.iv));
+  };
+  const result=await collectTracks({tracks:[parsed]},request,makeControl());
+  assert.equal(keyCalls,3);
+  assert.equal(segmentCalls,2);
+  assert.deepEqual(Buffer.from(await result.tracks[0].blob.arrayBuffer()),Buffer.concat([plain,plain]));
+});
+
+test("exhausted 502 key retries report the key service; access refusal is not retried", async () => {
+  const parsed=parseHls('#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="key"\n#EXTINF:1,\na.ts\n#EXT-X-ENDLIST',base);
+  for(const status of [502,403]) {
+    let calls=0;
+    const request=async url=>{
+      if(url.endsWith('/key')) {calls++;throw Object.assign(Error('provider response'),{status,noRetry:status===403});}
+      return new Response(new Uint8Array(16));
+    };
+    await assert.rejects(collectTracks({tracks:[parsed]},request,makeControl()),error=>{
+      assert.equal(error.stopBatch,true);
+      assert.equal(error.status,status);
+      assert.match(error.message,new RegExp('HLS key.*HTTP '+status));
+      return true;
+    });
+    assert.equal(calls,status===502?3:1);
+  }
+});
+
+test("requester retains HTTP status so unavailable keys can be distinguished from access denial", async () => {
+  for(const status of [502,403,429]) {
+    const api={scripting:{executeScript:async()=>[{result:{status,type:'text/plain',base64:btoa('provider error'),url:'https://dramatip.net/api/idrama-key'}}]}};
+    const request=requester(api,{sourceTabId:1,sourceOrigin:'https://dramatip.net'},makeControl());
+    await assert.rejects(request('https://dramatip.net/api/idrama-key'),error=>error.status===status && error.noRetry===(status===403));
   }
 });

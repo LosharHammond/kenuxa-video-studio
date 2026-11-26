@@ -452,9 +452,28 @@ export async function collectTracks(
   const total = plan.tracks.reduce((n, t) => n + t.segments.length, 0),
     output = [];
   const keys = new Map();
+  async function requestPart(url, options) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await control.checkpoint();
+      try { return await request(url, options); }
+      catch (error) {
+        if (error.noRetry || error.name === "AbortError" || attempt === 2) throw error;
+        await new Promise(resolve => setTimeout(resolve, 400 * (attempt + 1)));
+      }
+    }
+  }
   async function decryptPart(bytes, encryption) {
     if (!keys.has(encryption.url)) keys.set(encryption.url, (async () => {
-      const response = await request(encryption.url, { hlsKey: true });
+      let response;
+      try { response = await requestPart(encryption.url, { hlsKey: true }); }
+      catch (error) {
+        if (error.name === "AbortError") throw error;
+        const status = error.status ? ` (HTTP ${error.status})` : "";
+        throw Object.assign(Error(error.noRetry
+          ? `The provider refused the HLS key${status}. Retry this episode after access is restored.`
+          : `The HLS key service is unavailable${status} after 3 attempts. Retry this episode after the service recovers.`),
+          { status: error.status, noRetry: error.noRetry, stopBatch: true });
+      }
       const raw = new Uint8Array(await response.arrayBuffer());
       if (raw.length !== 16)
         throw Object.assign(Error("The provider did not supply a 16-byte HLS key. No file was saved."), { noRetry: true, stopBatch: true });
@@ -480,18 +499,7 @@ export async function collectTracks(
         if (i >= parts.length) return;
         try {
           const segment = track.segments[i];
-          let response;
-          for (let attempt = 0; attempt < 3; attempt++) {
-            await control.checkpoint();
-            try {
-              response = await request(segment.url, { range: segment.range });
-              break;
-            } catch (e) {
-              if (e.noRetry || e.name === "AbortError" || attempt === 2)
-                throw e;
-              await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
-            }
-          }
+          const response = await requestPart(segment.url, { range: segment.range });
           let bytes = new Uint8Array(await response.arrayBuffer());
           if (!bytes.byteLength)
             throw Error(

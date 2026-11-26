@@ -41,6 +41,18 @@ test("batch selection groups master renditions and avoids ambiguous captures", (
   assert.equal(chooseEpisodeSource([capture("https://cdn.test/a.mp3", "Audio")], [player()]), null);
   assert.equal(chooseEpisodeSource([capture("https://cdn.test/a.mp4", "Video")], []), null);
 });
+test("loaded paused players can resolve before keys arrive, without guessing between independent playlists", () => {
+  const stopped={...player(),playing:false,visible:true,urls:[]};
+  const master={...capture('https://cdn.test/master.m3u8'),master:true,
+    variants:[{url:'https://cdn.test/video.m3u8',height:720}],audioPlaylists:[{url:'https://cdn.test/audio.m3u8'}]};
+  assert.equal(chooseEpisodeSource([master,capture(master.variants[0].url),capture(master.audioPlaylists[0].url)],[stopped]).url,master.url);
+  const second={...master,url:'https://cdn.test/other-master.m3u8',variants:[{url:'https://cdn.test/other-video.m3u8',height:720}]};
+  assert.equal(chooseEpisodeSource([master,second],[stopped]),null);
+  assert.equal(chooseEpisodeSource([capture('https://cdn.test/audio.m3u8')],[stopped]),null);
+  assert.equal(chooseEpisodeSource([master],[stopped,{...stopped,frameId:2}]),null);
+  const direct=capture('https://cdn.test/movie.mp4','Video');
+  assert.equal(chooseEpisodeSource([direct],[{...stopped,urls:[direct.url]}]).url,direct.url);
+});
 
 function browserMock() {
   const removed = [], functions = [];

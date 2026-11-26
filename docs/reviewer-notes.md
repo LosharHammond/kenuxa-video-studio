@@ -1,4 +1,6 @@
-# Reviewer notes — 2.6.1
+# Reviewer notes — 2.6.2
+
+Loaded-player matching no longer requires playing frames when an exact source or a single parsed video master is available. Multiple visible players or unrelated playlists stay ambiguous. HLS keys share the segment retry policy: three bounded attempts for transient failures, immediate rejection for access refusals, and batch pause on exhaustion. Tests exercise successful recovery from two HTTP 502 responses and distinguish persistent outages from HTTP 403. No source-descriptor decoder or new permissions were added.
 
 Series jobs use DramaTip's native autoplay query parameter without synthetic clicks or new permissions. Standard HLS AES-128 identity keys are decoded locally with Web Crypto AES-CBC; key bytes stay in job memory. IDrama keys on DramaTip follow the site's ordinary same-origin key transport. Access refusals, DRM key formats, SAMPLE-AES and encrypted byte ranges are not bypassed. Unsupported episodes pause the batch instead of repeatedly failing the rest. The Studio integration test exercises pause and explicit resume. Live installed-extension full-series testing remains outstanding.
 
