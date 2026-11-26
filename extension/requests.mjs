@@ -1,3 +1,17 @@
+// Match the player's ordinary same-origin key transport; never alter credentials.
+export function hlsKeyRequestUrl(value, sourceOrigin) {
+  let key, page;
+  try { key = new URL(value); page = new URL(sourceOrigin); } catch { return value; }
+  if (page.protocol !== "https:" || !["dramatip.net", "www.dramatip.net"].includes(page.hostname) ||
+      key.protocol !== "https:" || key.hostname !== "api.idrama.video" ||
+      key.pathname !== "/shorts/open/drm/kds/api/v1/keys") return value;
+  const source = key.searchParams.get("source"), ak = key.searchParams.get("ak");
+  if (!/^[A-Za-z0-9_-]{1,32}$/.test(source || "") || !/^[0-9a-f]{32}$/i.test(ak || "")) return value;
+  const url = new URL("/api/idrama-key", page);
+  url.searchParams.set("source", source);
+  url.searchParams.set("ak", ak);
+  return url.href;
+}
 export async function fetchInPage(url, expectedOrigin, options = {}) {
   if (location.origin !== expectedOrigin)
     return { error: "The source page changed. Detect this media again." };
@@ -73,6 +87,7 @@ export async function fetchInPage(url, expectedOrigin, options = {}) {
 export function requester(api, source, control) {
   return async (url, options = {}) => {
     await control.checkpoint();
+    if (options.hlsKey) url = hlsKeyRequestUrl(url, source?.sourceOrigin);
     let response;
     if (source?.sourceTabId !== undefined && source.sourceOrigin) {
       const result = await api.scripting.executeScript({

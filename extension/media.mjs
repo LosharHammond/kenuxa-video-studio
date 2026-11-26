@@ -45,6 +45,14 @@ export function attrs(line) {
     ]),
   );
 }
+const unsupportedHls = (message) => Object.assign(Error(message), {
+  code: "UNSUPPORTED_HLS", noRetry: true, stopBatch: true,
+});
+function hlsIv(value) {
+  if (!/^0x[0-9a-f]{1,32}$/i.test(value || ""))
+    throw unsupportedHls("Invalid AES-128 initialization vector.");
+  return value.slice(2).padStart(32, "0");
+}
 export function parseHls(text, base) {
   const lines = text
     .replace(/^\uFEFF/, "")
@@ -59,14 +67,30 @@ export function parseHls(text, base) {
     range,
     map,
     lastRange,
-    duration = 0;
+    duration = 0,
+    sequence = 0n,
+    encryption;
   const variants = [],
     segments = [],
     audio = [];
   for (const line of lines.slice(1)) {
-    if (/^#EXT-X-(SESSION-)?KEY:/.test(line) && attrs(line).METHOD !== "NONE")
-      throw Error("Encrypted or protected stream. Kenuxa does not decrypt it.");
-    if (line.startsWith("#EXT-X-STREAM-INF:")) pending = attrs(line);
+    if (/^#EXT-X-(SESSION-)?KEY:/.test(line)) {
+      const a = attrs(line);
+      if (a.METHOD === "NONE") { encryption = undefined; continue; }
+      if (a.METHOD !== "AES-128" || (a.KEYFORMAT && a.KEYFORMAT !== "identity") ||
+          (a.KEYFORMATVERSIONS && a.KEYFORMATVERSIONS !== "1"))
+        throw unsupportedHls("DRM or unsupported HLS encryption. Only standard identity AES-128 keys are supported.");
+      if (!a.URI) throw unsupportedHls("The AES-128 playlist is missing its key URI.");
+      const key = { method: "AES-128", url: urlOf(a.URI, base), iv: a.IV ? hlsIv(a.IV) : undefined };
+      // Session keys are hints; each media playlist must declare its own key.
+      if (line.startsWith("#EXT-X-KEY:")) encryption = key;
+    } else if (line.startsWith("#EXT-X-MEDIA-SEQUENCE:")) {
+      const value = line.slice(22);
+      if (!/^\d+$/.test(value) || segments.length) throw unsupportedHls("Invalid HLS media sequence.");
+      sequence = BigInt(value);
+    } else if (line === "#EXT-X-I-FRAMES-ONLY") {
+      throw unsupportedHls("I-frame-only HLS is not a complete episode.");
+    } else if (line.startsWith("#EXT-X-STREAM-INF:")) pending = attrs(line);
     else if (line.startsWith("#EXT-X-MEDIA:")) {
       const a = attrs(line);
       if (a.TYPE === "AUDIO" && a.URI)
@@ -76,6 +100,11 @@ export function parseHls(text, base) {
         next = { url: urlOf(a.URI, base) };
       if (a.BYTERANGE)
         next.range = parseRange(a.BYTERANGE, undefined, next.url);
+      if (encryption) {
+        if (!encryption.iv) throw unsupportedHls("An encrypted HLS initialization map requires an explicit IV.");
+        if (next.range) throw unsupportedHls("Encrypted HLS byte ranges are not supported.");
+        next.encryption = { ...encryption };
+      }
       if (map && JSON.stringify(map) !== JSON.stringify(next))
         throw Error("Changing HLS initialization maps are not supported.");
       map = next;
@@ -99,12 +128,19 @@ export function parseHls(text, base) {
         pending = undefined;
       } else {
         const seg = { url };
+        if (encryption) {
+          const iv = encryption.iv || sequence.toString(16).padStart(32, "0");
+          if (iv.length > 32) throw unsupportedHls("The HLS sequence exceeds the AES IV range.");
+          seg.encryption = { ...encryption, iv };
+        }
         if (range) {
+          if (encryption) throw unsupportedHls("Encrypted HLS byte ranges are not supported.");
           seg.range = parseRange(range, lastRange, url);
           lastRange = { ...seg.range, url };
           range = undefined;
         } else lastRange = undefined;
         segments.push(seg);
+        sequence++;
       }
     }
   }
@@ -227,7 +263,7 @@ export function parseDash(xml, base, quality = "best") {
     throw Error("Invalid DASH manifest.");
   const mpd = doc.documentElement;
   if (doc.getElementsByTagNameNS("*", "ContentProtection").length)
-    throw Error("Protected DASH stream. Kenuxa does not decrypt it.");
+    throw unsupportedHls("DRM-protected DASH is not supported. The batch is paused.");
   if (mpd.getAttribute("type") === "dynamic")
     throw Error("Live DASH streams are not supported.");
   const periods = children(mpd, "Period");
@@ -415,6 +451,24 @@ export async function collectTracks(
     size = 0;
   const total = plan.tracks.reduce((n, t) => n + t.segments.length, 0),
     output = [];
+  const keys = new Map();
+  async function decryptPart(bytes, encryption) {
+    if (!keys.has(encryption.url)) keys.set(encryption.url, (async () => {
+      const response = await request(encryption.url, { hlsKey: true });
+      const raw = new Uint8Array(await response.arrayBuffer());
+      if (raw.length !== 16)
+        throw Object.assign(Error("The provider did not supply a 16-byte HLS key. No file was saved."), { noRetry: true, stopBatch: true });
+      return crypto.subtle.importKey("raw", raw, "AES-CBC", false, ["decrypt"]);
+    })().catch(error => { error.stopBatch = true; throw error; }));
+    const key = await keys.get(encryption.url);
+    await control.checkpoint();
+    try {
+      const iv = Uint8Array.from(encryption.iv.match(/../g), b => parseInt(b, 16));
+      return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-CBC", iv }, key, bytes));
+    } catch {
+      throw Object.assign(Error("AES-128 media could not be decoded with the supplied key and IV. No file was saved."), { noRetry: true, stopBatch: true });
+    }
+  }
   for (const track of plan.tracks) {
     const parts = new Array(track.segments.length);
     let next = 0,
@@ -438,7 +492,7 @@ export async function collectTracks(
               await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
             }
           }
-          const bytes = new Uint8Array(await response.arrayBuffer());
+          let bytes = new Uint8Array(await response.arrayBuffer());
           if (!bytes.byteLength)
             throw Error(
               "The provider returned an empty media part. No incomplete file was saved.",
@@ -463,6 +517,8 @@ export async function collectTracks(
             throw Error(
               "This job exceeds the 256 MB browser memory limit. Choose a lower quality.",
             );
+          if (segment.encryption) bytes = await decryptPart(bytes, segment.encryption);
+          await control.checkpoint();
           parts[i] = bytes;
           onProgress(++done, total, size);
         } catch (e) {

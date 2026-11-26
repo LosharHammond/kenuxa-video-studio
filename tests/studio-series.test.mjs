@@ -14,7 +14,7 @@ test("Studio queues a selected series once, saves in order without per-file save
     dialog.close = () => dialog.removeAttribute("open");
   }
   const tabs = new Map(), events = [], saves = [], data = {};
-  let tabId=10;
+  let tabId=10, drmMode=false;
   const source = {sourceTabId:1,title:"Test series | Example",sourceUrl:"https://example.test/series/show"};
   const storage = {get:async key=>({[key]:key==="studio-test"?source:data[key]}),set:async values=>Object.assign(data,values)};
   globalThis.document=document;
@@ -30,9 +30,13 @@ test("Studio queues a selected series once, saves in order without per-file save
     },
     scripting:{executeScript:async ({func,target,args})=>{
       const id=target.tabId;
-      if(func.name==="findEpisodeLinks")return [{result:[1,2,3].map(number=>({number,pageUrl:`https://example.test/series/show/episode-${number}`}))}];
-      if(func.name==="inspectPlayers")return [{frameId:0,result:id===1?[]:[{urls:[`https://cdn.test/${id}.mp4`],playing:true,frameId:0,sourceOrigin:"https://example.test",observedAt:Date.now()}]}];
+      if(func.name==="findEpisodeLinks")return [{result:(drmMode?[4,5]:[1,2,3]).map(number=>({number,pageUrl:`https://example.test/series/show/episode-${number}`}))}];
+      if(func.name==="inspectPlayers")return [{frameId:0,result:id===1?[]:[{urls:[`https://cdn.test/${id}.${id===14?'m3u8':'mp4'}`],playing:true,frameId:0,sourceOrigin:"https://example.test",observedAt:Date.now()}]}];
       if(func.name==="fetchInPage") {
+        if(id===14) {
+          const text='#EXTM3U\n#EXT-X-KEY:METHOD=SAMPLE-AES,URI="license"\n#EXTINF:1,\nx.ts\n#EXT-X-ENDLIST';
+          return [{result:{status:200,url:args[0],type:'application/vnd.apple.mpegurl',length:String(text.length),base64:btoa(text)}}];
+        }
         if(id===12)return [{result:{error:"Fixture episode failed"}}];
         return [{result:{status:200,url:args[0],type:"video/mp4",length:"8",base64:args[2].method==="HEAD"?"":btoa("testdata")}}];
       }
@@ -66,6 +70,19 @@ test("Studio queues a selected series once, saves in order without per-file save
     assert(saves.every(s=>s.saveAs===false && s.filename.startsWith("Test series/")));
     assert.deepEqual(events,["open:11","save:1","close:11","open:12","close:12","open:13","save:2","close:13"]);
     assert.equal(data.kenuxaHistory.length,2);
+    // A systemic unsupported stream must pause, rather than failing every episode.
+    drmMode=true;
+    await $("findEpisodes").onclick();
+    for(const c of $("episodeList").querySelectorAll("input"))c.setAttribute("checked","");
+    const blocked=$("queueEpisodes").onclick();
+    await $("sharePrivate").onclick();
+    await blocked;
+    await waitFor(()=>!$("resumeBatch").hidden && tabs.size===0);
+    assert(!events.includes('open:15'), 'next episode stays queued after DRM refusal');
+    assert.equal(saves.length,2);
+    $("resumeBatch").onclick();
+    await waitFor(()=>saves.length===3 && tabs.size===0);
+    assert(saves[2].filename.endsWith('Episode 005.mp4'));
   } finally {
     for(const [k,v] of Object.entries(original)) if(v===undefined)delete globalThis[k];else globalThis[k]=v;
   }

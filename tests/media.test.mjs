@@ -50,14 +50,14 @@ await test("HLS byte ranges preserve offsets and init map", () => {
     ],
   );
 });
-await test("encrypted, ambiguous, and live HLS stop safely", () => {
+await test("DRM, ambiguous, and live HLS stop safely", () => {
   assert.throws(
     () =>
       parseHls(
-        '#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="key"\n#EXT-X-ENDLIST',
+        '#EXTM3U\n#EXT-X-KEY:METHOD=SAMPLE-AES,URI="key"\n#EXT-X-ENDLIST',
         "https://a/b",
       ),
-    /Encrypted/,
+    /DRM/,
   );
   assert.throws(
     () =>
@@ -95,7 +95,7 @@ await test("DASH DRM and dynamic playlists are rejected", () => {
         "<MPD><Period><AdaptationSet><ContentProtection/></AdaptationSet></Period></MPD>",
         "https://a/a.mpd",
       ),
-    /Protected/,
+    /DRM/,
   );
 });
 await test("concurrent part fetches preserve byte order and retry a transient failure", async () => {

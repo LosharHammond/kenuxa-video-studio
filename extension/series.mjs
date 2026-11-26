@@ -40,9 +40,16 @@ export function startEpisodePlayer() {
   if (v) {
     v.muted = true;
     v.play().catch(() => {});
-  } else {
-    document.querySelector('.player-stage button[aria-label="Play"]')?.click();
   }
+  return { hasPlayer: Boolean(v) };
+}
+
+export function episodePlaybackUrl(pageUrl) {
+  const url = new URL(pageUrl);
+  if (["dramatip.net", "www.dramatip.net"].includes(url.hostname) &&
+      /\/series\/[^/]+(?:\/episode-\d+)?\/?$/.test(url.pathname))
+    url.searchParams.set("autoplay", "1");
+  return url.href;
 }
 
 export function chooseEpisodeSource(rows, players) {
@@ -67,7 +74,7 @@ export function pauseEpisodePlayer() {
 export async function resolveEpisode(api, episode, control, onStatus = () => {}, options = {}) {
   const timeout = options.timeout ?? 60000;
   const sleep = options.sleep || (ms => new Promise(r => setTimeout(r, ms)));
-  const tab = await api.tabs.create({ url: episode.pageUrl, active: false });
+  const tab = await api.tabs.create({ url: episodePlaybackUrl(episode.pageUrl), active: false });
   try {
     let deadline = Date.now() + timeout;
     const inspected = new Map();
@@ -102,12 +109,15 @@ export async function resolveEpisode(api, episode, control, onStatus = () => {},
               const parsed = parseHls(await response.text(), response.url || row.url);
               inspected.set(row.url, { master: Boolean(parsed.variants?.length),
                 variants: parsed.variants || [], audioPlaylists: parsed.audio || [] });
-            } catch { /* Unsupported streams fail through the regular downloader. */ }
+            } catch (error) {
+              if (error.stopBatch) inspected.set(row.url, { sourceError: error });
+            }
           }
           Object.assign(row, inspected.get(row.url));
         }
         const item = chooseEpisodeSource(saved, players);
         if (item) {
+          if (item.sourceError) throw item.sourceError;
           await api.scripting.executeScript({ target: { tabId: tab.id, allFrames: true }, func: pauseEpisodePlayer });
           await control.checkpoint();
           return { ...item, source: {
@@ -118,7 +128,7 @@ export async function resolveEpisode(api, episode, control, onStatus = () => {},
       }
       await sleep(1000);
     }
-    throw Error("No unambiguous video found within 60 seconds. Play this episode manually and retry. Locked or unsupported episodes cannot be downloaded.");
+    throw Object.assign(Error("Episode playback did not expose a supported video. The batch is paused. Open the episode page, press Play if required, then retry or resume the remaining episodes."), { stopBatch: true });
   } catch (error) {
     await api.tabs.remove(tab.id).catch(() => {});
     throw error;

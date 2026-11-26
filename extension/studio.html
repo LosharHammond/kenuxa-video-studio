@@ -296,6 +296,7 @@
                   connections.
                 </p>
               </div>
+              <button id="resumeBatch" class="primary" hidden>Resume remaining episodes</button>
               <button id="clearFinished" class="secondary">
                 Clear finished jobs
               </button>
@@ -405,8 +406,8 @@
                     downloads.
                   </li>
                   <li>
-                    Complete, unencrypted HLS, quality selection, byte ranges
-                    and separate audio tracks.
+                    Complete clear or standard AES-128 HLS, quality selection
+                    and separate audio tracks. Byte ranges are supported for clear streams.
                   </li>
                   <li>
                     Static, unprotected DASH with one period and common
@@ -417,8 +418,8 @@
                   </li>
                 </ul>
                 <p>
-                  There is no universal website extractor. DRM, encrypted
-                  manifests, live streams, signature deciphering and paywall
+                  There is no universal website extractor. DRM license systems,
+                  SAMPLE-AES, encrypted byte ranges, live streams and paywall
                   bypass are unsupported. Sites using custom players may not
                   expose a usable media source.
                 </p>

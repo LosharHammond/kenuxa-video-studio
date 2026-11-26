@@ -40,6 +40,7 @@ const state = {
   view: "home",
   videos: [],
   running: false,
+  queuePaused: false,
   preview: null,
   showAllSources: false,
 };
@@ -367,6 +368,7 @@ function showView(view) {
   if (view === "history") renderHistory();
 }
 function renderQueue() {
+  $("resumeBatch").hidden = !state.queuePaused;
   const list = $("queueList");
   list.replaceChildren();
   if (!state.queue.length)
@@ -438,6 +440,7 @@ function renderQueue() {
     if (["failed", "cancelled"].includes(j.status))
       controls.append(
         button("↻ Retry", "secondary small", () => {
+          state.queuePaused = false;
           j.status = "queued";
           j.progress = 0;
           j.message = "Waiting to retry.";
@@ -446,6 +449,9 @@ function renderQueue() {
           runQueue();
         }),
       );
+    if (j.episode && j.status === "failed")
+      controls.append(button("Open episode page", "secondary small", () =>
+        api.tabs.create({ url: j.episode.pageUrl, active: true })));
     if (j.status === "complete")
       controls.append(
         button("Show saved file", "secondary small", () =>
@@ -980,10 +986,11 @@ function updateJob(j) {
   }
 }
 async function runQueue() {
-  if (state.running) return;
+  if (state.running || state.queuePaused) return;
   state.running = true;
   try {
     for (;;) {
+      if (state.queuePaused) break;
       const j = state.queue.find((j) => j.status === "queued");
       if (!j) break;
       let episodeTabId;
@@ -1014,6 +1021,10 @@ async function runQueue() {
             ? "Download cancelled."
             : e.message || String(e);
         if (j.localFile) $("convertStatus").textContent = j.message;
+        if (j.episode && j.status === "failed" && e.stopBatch) {
+          state.queuePaused = true;
+          notify("Series batch paused: " + j.message + " Retry this episode, or resume the remaining episodes.", true);
+        }
       } finally {
         if (episodeTabId !== undefined)
           await api.tabs.remove(episodeTabId).catch(() => {});
@@ -1195,6 +1206,11 @@ $("clearFinished").onclick = () => {
     (j) => !["complete", "failed", "cancelled"].includes(j.status),
   );
   renderQueue();
+};
+$("resumeBatch").onclick = () => {
+  state.queuePaused = false;
+  renderQueue();
+  runQueue();
 };
 $("clearHistory").onclick = async () => {
   state.history = [];

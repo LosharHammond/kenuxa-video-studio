@@ -1,4 +1,6 @@
-# Reviewer notes — 2.5.0
+# Reviewer notes — 2.6.1
+
+Series jobs use DramaTip's native autoplay query parameter without synthetic clicks or new permissions. Standard HLS AES-128 identity keys are decoded locally with Web Crypto AES-CBC; key bytes stay in job memory. IDrama keys on DramaTip follow the site's ordinary same-origin key transport. Access refusals, DRM key formats, SAMPLE-AES and encrypted byte ranges are not bypassed. Unsupported episodes pause the batch instead of repeatedly failing the rest. The Studio integration test exercises pause and explicit resume. Live installed-extension full-series testing remains outstanding.
 
 All first-party JavaScript, CSS and HTML are readable source in extension/. No runtime remote code, eval-based remote logic or downloaded WASM exists. The only remote Kenuxa endpoint returns JSON source-listing metadata. It is not an executable-code service.
 

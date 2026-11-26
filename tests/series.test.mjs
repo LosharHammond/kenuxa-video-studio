@@ -2,8 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { parseHTML } from "linkedom";
 import { readFile } from "node:fs/promises";
-import { findEpisodeLinks, chooseEpisodeSource, resolveEpisode } from "../extension/series.mjs";
+import { findEpisodeLinks, chooseEpisodeSource, resolveEpisode, episodePlaybackUrl } from "../extension/series.mjs";
 import { makeControl } from "../extension/media.mjs";
+test("DramaTip uses the site's autoplay route without adding parameters to other providers", () => {
+  assert.equal(episodePlaybackUrl('https://dramatip.net/series/show/episode-2?lang=en'), 'https://dramatip.net/series/show/episode-2?lang=en&autoplay=1');
+  assert.equal(episodePlaybackUrl('https://dramatip.net/series/show?autoplay=0'), 'https://dramatip.net/series/show?autoplay=1');
+  assert.equal(episodePlaybackUrl('https://example.test/show/episode-2'), 'https://example.test/show/episode-2');
+});
 
 test("DramaTip episode links are deduplicated, scoped to the series and numerically ordered", async () => {
   globalThis.document = parseHTML(await readFile(new URL("fixtures/dramatip-episodes.html", import.meta.url), "utf8")).document;
